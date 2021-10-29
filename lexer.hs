@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
+module Lexer (Token (..) , getTokens) where
+
 import Data.List
 import Data.Char
-import System.IO
-import System.Environment
 
 data Token
     = Eof
@@ -15,7 +15,7 @@ data Token
     | Div
     | LeftBraces
     | RightBraces
-    deriving Show
+    deriving (Show, Eq)
 
 alfa :: [Char]
 alfa = ['a'..'z'] ++ ['A'..'Z']
@@ -55,10 +55,3 @@ stateIdent text "" = [Ident text]
 stateIdent text (x:xs)
     | elem x (nums ++ alfa) = stateIdent (text ++ [x]) xs
     | otherwise = Ident text : getTokens xs
-
-main :: IO ()
-main = do
-    args <- getArgs
-    putStrLn $ "Lexing " ++ head args
-    str <- readFile $ head args
-    print $ getTokens str
