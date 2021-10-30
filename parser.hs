@@ -8,6 +8,14 @@ data Expr
     | EOp (Integer -> Integer -> Integer) String Expr Expr
     | EError
 
+parse :: [Token] -> Expr
+parse tokens =
+    let (toks, expr) = getExpr tokens
+    in
+    case toks of
+        [Eof] -> expr
+        _ -> EError
+
 getExpr :: [Token] -> ([Token], Expr)
 getExpr tokens = 
     getExprPrime toks expr
@@ -40,20 +48,21 @@ getFactor (Ident i : rest) = (rest, EIdentVal i)
 getFactor (LeftBraces : rest) =
     case getExpr rest of
         (RightBraces : rest, expr) -> (rest, expr)
-        ([Eof], _) -> ([Eof], EError)
-        n -> n
+        (toks, _) -> (toks, EError)
 getFactor other = (other, EError)
 
-mevalExpr :: Expr -> Expr
-mevalExpr (ENumVal n) = ENumVal n
-mevalExpr (EIdentVal i) = EIdentVal i
-mevalExpr EError = EError
-mevalExpr (EOp op s l r) =
-    let el = mevalExpr l
-        er = mevalExpr r
+evalExpr :: Expr -> Expr
+evalExpr (ENumVal n) = ENumVal n
+evalExpr (EIdentVal i) = EIdentVal i
+evalExpr EError = EError
+evalExpr (EOp op s l r) =
+    let el = evalExpr l
+        er = evalExpr r
     in
     case (el, er) of
         (ENumVal a, ENumVal b) -> ENumVal (op a b)
+        (EError, _) -> EError
+        (_, EError) -> EError
         _ -> EOp op s el er
 
 showExpr :: Expr -> String
@@ -67,5 +76,5 @@ main = do
     args <- getArgs
     str <- readFile $ head args
     putStrLn $ 
-        let (_, expr) = getExpr (getTokens str) in
-        (showExpr expr) ++ " = " ++ (showExpr $ mevalExpr expr)
+        let expr = parse (getTokens str) in
+        (showExpr expr) ++ " = " ++ (showExpr $ evalExpr expr)
