@@ -47,11 +47,11 @@ stateNum :: Integer -> String -> [Token]
 stateNum n "" = [Number n]
 stateNum n (x:xs)
     | elem x nums = stateNum (10*n + nn) xs
-    | otherwise = Number n : getTokens xs
+    | otherwise = Number n : getTokens (x:xs)
     where nn = toInteger $ ord x - ord '0'
 
 stateIdent :: String -> String -> [Token]
 stateIdent text "" = [Ident text]
 stateIdent text (x:xs)
     | elem x (nums ++ alfa) = stateIdent (text ++ [x]) xs
-    | otherwise = Ident text : getTokens xs
+    | otherwise = Ident text : getTokens (x:xs)
