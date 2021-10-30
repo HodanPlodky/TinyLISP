@@ -5,24 +5,19 @@ import Lexer
 data Expr
     = ENumVal Integer
     | EIdentVal String
-    | EAdd Expr Expr
-    | ESub Expr Expr
-    | EMul Expr Expr
-    | EDiv Expr Expr
+    | EOp (Integer -> Integer -> Integer) String Expr Expr
     | EError
-    deriving Show
 
 getExpr :: [Token] -> ([Token], Expr)
 getExpr tokens = 
     getExprPrime toks expr
     where (toks, expr) = getTerm tokens 
 
-
 getExprPrime :: [Token] -> Expr -> ([Token], Expr)
 getExprPrime [] i = ([], i)
 getExprPrime (tok:rest) i
-    | tok == Lexer.Add = getExprPrime toks (EAdd i expr)
-    | tok == Lexer.Sub = getExprPrime toks (ESub i expr)
+    | tok == Lexer.Add = getExprPrime toks (EOp (+) "+" i expr)
+    | tok == Lexer.Sub = getExprPrime toks (EOp (-) "-" i expr)
     | otherwise = (tok : rest, i)
     where (toks, expr) = getTerm rest
 
@@ -34,8 +29,8 @@ getTerm tokens =
 getTermPrime :: [Token] -> Expr -> ([Token], Expr)
 getTermPrime [] i = ([], i)
 getTermPrime (tok:rest) i
-    | tok == Lexer.Mul =  getTermPrime toks (EMul i expr)
-    | tok == Lexer.Div = getTermPrime toks (EDiv i expr)
+    | tok == Lexer.Mul =  getTermPrime toks (EOp (*) "*" i expr)
+    | tok == Lexer.Div = getTermPrime toks (EOp div "/" i expr)
     | otherwise = (tok : rest, i)
     where (toks, expr) = getFactor rest
 
@@ -52,43 +47,19 @@ getFactor other = (other, EError)
 mevalExpr :: Expr -> Expr
 mevalExpr (ENumVal n) = ENumVal n
 mevalExpr (EIdentVal i) = EIdentVal i
-mevalExpr (EAdd l r) =
-    let el = mevalExpr l
-        er = mevalExpr r
-    in
-    case (el, er) of
-        (ENumVal a, ENumVal b) -> ENumVal (a + b)
-        _ -> EAdd el er
-mevalExpr (ESub l r) =
-    let el = mevalExpr l
-        er = mevalExpr r
-    in
-    case (el, er) of
-        (ENumVal a, ENumVal b) -> ENumVal (a - b)
-        _ -> ESub el er
-mevalExpr (EMul l r) =
-    let el = mevalExpr l
-        er = mevalExpr r
-    in
-    case (el, er) of
-        (ENumVal a, ENumVal b) -> ENumVal (a * b)
-        _ -> EMul el er
-mevalExpr (EDiv l r) =
-    let el = mevalExpr l
-        er = mevalExpr r
-    in
-    case (el, er) of
-        (ENumVal a, ENumVal b) -> ENumVal (div a b)
-        _ -> EDiv el er
 mevalExpr EError = EError
+mevalExpr (EOp op s l r) =
+    let el = mevalExpr l
+        er = mevalExpr r
+    in
+    case (el, er) of
+        (ENumVal a, ENumVal b) -> ENumVal (op a b)
+        _ -> EOp op s el er
 
 showExpr :: Expr -> String
 showExpr (ENumVal n) = show n
 showExpr (EIdentVal i ) = i
-showExpr (EAdd l r) = "(" ++ showExpr l ++ " + " ++ showExpr r ++ ")"
-showExpr (ESub l r) = "(" ++ showExpr l ++ " - " ++ showExpr r ++ ")"
-showExpr (EMul l r) = showExpr l ++ " * " ++ showExpr r
-showExpr (EDiv l r) = showExpr l ++ " / " ++ showExpr r
+showExpr (EOp _ s l r) = "(" ++ showExpr l ++ " " ++ s ++ " " ++ showExpr r ++ ")"
 showExpr EError = "<ERROR>"
 
 main :: IO ()
