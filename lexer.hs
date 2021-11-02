@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
 module Lexer (Token (..) , getTokens) where
-
+-- test
 import Data.List
 import Data.Char
 
