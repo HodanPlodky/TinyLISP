@@ -1,5 +1,5 @@
 all:
-	ghc -v -dynamic src/**.hs
+	ghc -dynamic src/*.hs src/**/*.hs 
 
 run:
 	src/main
