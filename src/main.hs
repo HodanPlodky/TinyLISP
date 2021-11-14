@@ -3,13 +3,16 @@ import System.Environment
 import Lexer
 import Parser
 import Ast
+import Vm
 
-run :: String -> Inst
-run = generate . parse . getTokens
+getInst :: String -> Inst
+getInst = generate . parse . getTokens
+
+run :: String -> [Integer] 
+run = startvm . getInst
 
 main :: IO()
 main = do
-    putStrLn "Hi"
     args <- getArgs
     str <- readFile $ head args
     putStrLn . show $ run str

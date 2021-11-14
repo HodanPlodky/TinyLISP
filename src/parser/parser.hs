@@ -19,6 +19,7 @@ parseImp acc t =
     parseImp (acc ++ [e]) toks
 
 expression :: [Token] -> (Expr, [Token])
+expression (TNumber n : rest) = (ENum n, rest)
 expression (TLBrac:TAdd:rest) = expressionBin rest OAdd
 expression (TLBrac:TSub:rest) = expressionBin rest OSub
 expression (TLBrac:TMul:rest) = expressionBin rest OMul
@@ -40,4 +41,4 @@ expressionBin t op =
     in
     case toks of
       (TRBrac:rest) -> (EBinOp op l r, rest)
-      _ -> (EError, toks)
+      _ -> (EError, [])
