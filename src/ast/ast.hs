@@ -1,20 +1,29 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Ast (Expr(..)) where
+module Ast (Inst(..), Expr(..), BinOp(..), appendExpr, generate) where
 
-import Data.List
+data BinOp
+    = OAdd
+    | OSub
+    | OMul
+    | ODiv
+    deriving Show
 
 data Expr
     = ENum Integer
     | ECons Expr Expr
     | EFunc
-    | EAdd Expr Expr
-    | ESub Expr Expr
-    | EMul Expr Expr
-    | EDiv Expr Expr
+    | EBinOp BinOp Expr Expr
     | EIf   { cond :: Expr
             , thenB :: Expr
             , elseb :: Expr
             }
+    | EList [Expr]
+    | EError
+    deriving Show
+
+appendExpr :: Expr -> Expr -> Expr
+appendExpr (EList l) e = EList (l ++ [e])
+appendExpr e1 e2 = EList [e1, e2]
 
 data Inst
     = InstList [Inst]
@@ -30,6 +39,7 @@ data Inst
     | CONSP
     | SEL
     | JOIN
+    deriving Show
 
 appendInst :: Inst -> Inst -> Inst
 appendInst (InstList l) i = InstList (l ++ [i])
@@ -37,12 +47,15 @@ appendInst i1 i2 = InstList [i1, i2]
 
 generate :: Expr -> Inst
 generate (ENum n) = LDC n
-generate (EAdd x y) = InstList [generate x, generate y, ADD]
-generate (ESub x y) = InstList [generate x, generate y, SUB]
-generate (EMul x y) = InstList [generate x, generate y, MUL]
-generate (EDiv x y) = InstList [generate x, generate y, DIV]
+generate (EBinOp OAdd x y) = InstList [generate x, generate y, ADD]
+generate (EBinOp OSub x y) = InstList [generate x, generate y, SUB]
+generate (EBinOp OMul x y) = InstList [generate x, generate y, MUL]
+generate (EBinOp ODiv x y) = InstList [generate x, generate y, DIV]
 generate (EIf cond thenB elseB) = 
     InstList    [ generate cond, SEL
                 , appendInst (generate thenB) JOIN
                 , appendInst (generate elseB) JOIN
                 ]
+generate (EList exprs) = InstList $ map generate  exprs
+generate (EError) = NIL
+generate _ = NIL

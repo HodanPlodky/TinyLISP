@@ -1,14 +1,6 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Lexer (Token (..) , getTokens) where
+module Lexer (Token (..), Keyword(..), getTokens) where
 import Data.Char
-{-
-data Position = Position
-    {
-        line :: Integer,
-        col :: Integer,
-        file :: String
-    }
---}
 
 data Keyword
     = Defun
@@ -50,7 +42,7 @@ whiteSpace :: [Char]
 whiteSpace = ['\n', '\r', '\r', ' ']
 
 match :: a -> [(a -> Bool, b)] -> Maybe b
-match item [] = Nothing
+match _ [] = Nothing
 match item (test:rest) =
     if ((fst test) item)
        then Just $ snd test
@@ -69,11 +61,16 @@ getTokens (c:rest) =
             (elemCh alfa, stateIdent (c:rest) ""),
             (elemCh nums, stateStartNum (c:rest)),
             (\_ -> True,
-                case c of
-                    '(' -> [TLBrac]
-                    ')' -> [TRBrac]
-                    '.' -> [TDot]
-                    '\'' -> [TTick]
+                (case c of
+                    '(' -> TLBrac
+                    ')' -> TRBrac
+                    '.' -> TDot
+                    '\'' -> TTick
+                    '+' -> TAdd
+                    '-' -> TSub
+                    '*' -> TMul
+                    '/' -> TDiv
+                    _ -> TError "Undefined token") : getTokens rest
             )
             ]
     in

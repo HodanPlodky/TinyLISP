@@ -1,1 +1,1 @@
-ahoj ahoj cau if 123 0x12
+ahoj ahoj cau if 123 0x12 + () - * (12)
