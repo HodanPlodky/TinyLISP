@@ -1,4 +1,0 @@
-LDC x - push x on stack
-NIL - push nil on stack
-ADD SUB MUL DIV CONS - binary op
-CAR CDR CONSP - unary op
