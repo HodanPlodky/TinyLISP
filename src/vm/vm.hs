@@ -37,6 +37,15 @@ runvm (State (MUL : inst) (x:y:stack) dump) =
 runvm (State (DIV : inst) (x:y:stack) dump) =
     runvm $ State inst ((div y x):stack) dump
 
+runvm (State (SEL:x:y:inst)(c:stack) dump) =
+    let ninst = if (c /= 0) then [x] else [y]
+        ndump = InstList inst : dump
+    in
+    runvm $ State ninst stack ndump
+
+runvm (State (JOIN:inst) stack (x:dump)) =
+    runvm $ State (x:inst) stack dump
+
 runvm (State [] stack dump) =
     State [] stack dump
 
