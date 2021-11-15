@@ -25,6 +25,8 @@ mapInner :: StackData -> String
 mapInner (DataNum n) = show n
 mapInner (Cons (Cell (DataNum x) (DataNum y))) =
     "(" ++ show x ++ "." ++ show y ++ ")"
+mapInner (Cons (Cell (DataNum x) (Cons Empty))) =
+    show x
 mapInner (Cons (Cell (DataNum x) (Cons y))) =
     show x ++ " " ++ mapInner (Cons y)
 mapInner (Cons (Cell x y)) =
