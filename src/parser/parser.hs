@@ -24,6 +24,9 @@ expression (TLBrac:TAdd:rest) = expressionBin rest OAdd
 expression (TLBrac:TSub:rest) = expressionBin rest OSub
 expression (TLBrac:TMul:rest) = expressionBin rest OMul
 expression (TLBrac:TDiv:rest) = expressionBin rest ODiv
+expression (TLBrac:TLt:rest) = expressionBin rest OLt
+expression (TLBrac:TGt:rest) = expressionBin rest OGt
+expression (TLBrac:TKw Eq:rest) = expressionBin rest OEq
 expression (TLBrac:TKw If:rest) =
     let (cond, t1) = expression rest
         (thenB, t2) = expression t1
@@ -32,7 +35,8 @@ expression (TLBrac:TKw If:rest) =
     case toks of
         (TRBrac:rest) -> (EIf cond thenB elseB, rest)
         _ -> (EError, toks)
-expression toks = (EError, toks) 
+expression (_:rest) = (EError, rest)
+expression [] = (EError, [])
 
 expressionBin :: [Token] -> BinOp -> (Expr, [Token])
 expressionBin t op = 

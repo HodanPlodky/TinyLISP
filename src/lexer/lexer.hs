@@ -5,6 +5,7 @@ import Data.Char
 data Keyword
     = Defun
     | If
+    | Eq
     deriving Show
 
 checkIdent :: String -> Token
@@ -12,6 +13,7 @@ checkIdent name =
     case name of
         "if" -> TKw If
         "defun" -> TKw Defun
+        "eq?" -> TKw Eq
         n -> TIdent n
         
 
@@ -26,6 +28,8 @@ data Token
     | TSub
     | TMul
     | TDiv
+    | TLt
+    | TGt
     | TLBrac
     | TRBrac
     | TDot
@@ -34,6 +38,9 @@ data Token
 
 alfa :: [Char]
 alfa = ['a'..'z'] ++ ['A'..'Z']
+
+identChars :: [Char]
+identChars = alfa ++ ['_', '?']
 
 nums :: [Char]
 nums = ['0'..'9']
@@ -58,7 +65,7 @@ getTokens (c:rest) =
             match c 
             [
             (elemCh whiteSpace, getTokens rest),
-            (elemCh alfa, stateIdent (c:rest) ""),
+            (elemCh alfa, stateIdent (rest) [c]),
             (elemCh nums, stateStartNum (c:rest)),
             (\_ -> True,
                 (case c of
@@ -70,6 +77,8 @@ getTokens (c:rest) =
                     '-' -> TSub
                     '*' -> TMul
                     '/' -> TDiv
+                    '<' -> TLt
+                    '>' -> TGt
                     _ -> TError "Undefined token") : getTokens rest
             )
             ]
@@ -81,7 +90,7 @@ getTokens (c:rest) =
 stateIdent :: String -> String -> [Token]
 stateIdent "" acc = [checkIdent acc]
 stateIdent (c:rest) acc =
-    if (elem c alfa)
+    if (elem c identChars)
        then stateIdent rest (acc ++ [c])
        else checkIdent acc : getTokens (c:rest)
 

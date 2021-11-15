@@ -4,6 +4,16 @@ module Vm (startvm) where
 import Ast
 --import Debug.Trace
 
+data ConsCell
+    = Empty
+    | Cell Integer ConsCell
+    deriving Show
+
+data StackData
+    = DataNum Integer
+    | Cons ConsCell
+    deriving Show
+
 data State = State
     { code :: [Inst]
     , stack :: [Integer]

@@ -6,6 +6,9 @@ data BinOp
     | OSub
     | OMul
     | ODiv
+    | OLt
+    | OGt
+    | OEq
     deriving Show
 
 data Expr
@@ -49,6 +52,13 @@ generate :: Expr -> Inst
 generate (ENum n) = LDC n
 generate (EBinOp OAdd x y) = InstList [generate x, generate y, ADD]
 generate (EBinOp OSub x y) = InstList [generate x, generate y, SUB]
+generate (EBinOp OEq x y) = 
+    InstList [
+                InstList [generate x, generate y, SUB],
+                SEL,
+                InstList [LDC 0, JOIN],
+                InstList [LDC 1, JOIN]
+             ]
 generate (EBinOp OMul x y) = InstList [generate x, generate y, MUL]
 generate (EBinOp ODiv x y) = InstList [generate x, generate y, DIV]
 generate (EIf cond thenB elseB) = 
