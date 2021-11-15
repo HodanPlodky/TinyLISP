@@ -6,6 +6,8 @@ data Keyword
     = Defun
     | If
     | Eq
+    | FCons
+    | Null
     deriving Show
 
 checkIdent :: String -> Token
@@ -14,8 +16,9 @@ checkIdent name =
         "if" -> TKw If
         "defun" -> TKw Defun
         "eq?" -> TKw Eq
+        "cons" -> TKw FCons
+        "null" -> TKw Null
         n -> TIdent n
-        
 
 data Token
     = TEof

@@ -9,11 +9,13 @@ data BinOp
     | OLt
     | OGt
     | OEq
+    | OCons
     deriving Show
 
 data Expr
     = ENum Integer
     | ECons Expr Expr
+    | ENull
     | EFunc
     | EBinOp BinOp Expr Expr
     | EIf   { cond :: Expr
@@ -61,11 +63,13 @@ generate (EBinOp OEq x y) =
              ]
 generate (EBinOp OMul x y) = InstList [generate x, generate y, MUL]
 generate (EBinOp ODiv x y) = InstList [generate x, generate y, DIV]
+generate (EBinOp OCons x y) = InstList [generate y, generate x, CONS]
 generate (EIf cond thenB elseB) = 
     InstList    [ generate cond, SEL
                 , appendInst (generate thenB) JOIN
                 , appendInst (generate elseB) JOIN
                 ]
 generate (EList exprs) = InstList $ map generate  exprs
+generate (ENull) = InstList [NIL]
 generate (EError) = NIL
 generate _ = NIL
