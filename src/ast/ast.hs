@@ -44,6 +44,10 @@ data Inst
     | CONSP
     | SEL
     | JOIN
+    | LD Integer Integer
+    | LDF Inst
+    | AP
+    | RTN
     deriving Show
 
 appendInst :: Inst -> Inst -> Inst

@@ -8,6 +8,7 @@ data Keyword
     | Eq
     | FCons
     | Null
+    | Define
     deriving Show
 
 checkIdent :: String -> Token
@@ -18,6 +19,7 @@ checkIdent name =
         "eq?" -> TKw Eq
         "cons" -> TKw FCons
         "null" -> TKw Null
+        "define" -> TKw Define
         n -> TIdent n
 
 data Token
