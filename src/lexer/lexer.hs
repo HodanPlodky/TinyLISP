@@ -27,7 +27,7 @@ data Token
     | TError String
     | TIdent String
     | TKw Keyword
-    | TNumber Integer
+    | TNumber Int
     | TRNumber Double
     | TAdd
     | TSub
@@ -106,15 +106,15 @@ stateStartNum ('0':c:rest) = stateNum (c:rest) 0 8
 stateStartNum (c:rest) = stateNum (c:rest) 0 10
 stateStartNum _ = [TError "Not a number"]
 
-checkNum :: Char -> Integer -> Maybe Integer
+checkNum :: Char -> Int -> Maybe Int
 checkNum c base =
-    let n = toInteger $ ord c - ord '0' 
+    let n = ord c - ord '0' 
     in
     if (elem n [0..(base - 1)])
        then Just n
        else Nothing
 
-stateNum :: String -> Integer -> Integer -> [Token]
+stateNum :: String -> Int -> Int -> [Token]
 stateNum "" acc _ = [TNumber acc]
 stateNum (c:rest) acc base =
     case n of
@@ -122,13 +122,13 @@ stateNum (c:rest) acc base =
         Nothing -> TNumber acc : getTokens (c:rest)
     where n = checkNum c base
 
-checkHex :: Char -> Maybe Integer
+checkHex :: Char -> Maybe Int
 checkHex c
     | elem c nums = checkNum c 16
-    | elem c ['A'..'F'] = Just . toInteger $ (ord c - ord 'A') + 10
+    | elem c ['A'..'F'] = Just $ ((ord c - ord 'A') + 10)
     | otherwise = Nothing
 
-stateHex :: String -> Integer -> [Token]
+stateHex :: String -> Int -> [Token]
 stateHex  "" acc = [TNumber acc]
 stateHex (c:rest) acc =
     case n of

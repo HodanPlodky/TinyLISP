@@ -11,6 +11,9 @@ getInst = generate . parse . getTokens
 run :: String -> [StackData] 
 run = startvm . getInst
 
+compileAndSave :: String -> String -> IO()
+compileAndSave path = (save path) . getInst
+
 mapOutput :: StackData -> String
 mapOutput (DataNum n) = show n
 mapOutput (Cons (Cell (DataNum x) (DataNum y))) =
@@ -38,4 +41,5 @@ main :: IO()
 main = do
     args <- getArgs
     str <- readFile $ head args
-    putStr $ foldl (\x y -> x ++ y ++ "\n") "" (map mapOutput (run str))
+    --putStr $ foldl (\x y -> x ++ y ++ "\n") "" (map mapOutput (run str))
+    compileAndSave (args !! 1) str

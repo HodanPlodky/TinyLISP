@@ -1,5 +1,12 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Ast (Inst(..), Expr(..), BinOp(..), appendExpr, generate) where
+module Ast (Inst(..), Expr(..), BinOp(..), appendExpr, generate, save) where
+
+import qualified Data.ByteString.Lazy as BIN
+import Data.Binary.Put
+import Data.Binary
+import System.IO
+--import Data.Bits.Extras
+
 
 data BinOp
     = OAdd
@@ -13,7 +20,7 @@ data BinOp
     deriving Show
 
 data Expr
-    = ENum Integer
+    = ENum Int
     | ECons Expr Expr
     | ENull
     | EFunc
@@ -32,7 +39,7 @@ appendExpr e1 e2 = EList [e1, e2]
 
 data Inst
     = InstList [Inst]
-    | LDC Integer
+    | LDC Int
     | NIL
     | ADD
     | SUB
@@ -44,7 +51,7 @@ data Inst
     | CONSP
     | SEL
     | JOIN
-    | LD Integer Integer
+    | LD Int Int
     | LDF Inst
     | AP
     | RTN
@@ -77,3 +84,95 @@ generate (EList exprs) = InstList $ map generate  exprs
 generate (ENull) = InstList [NIL]
 generate (EError) = NIL
 generate _ = NIL
+
+save :: String -> Inst -> IO ()
+save path (InstList insts) = do
+    h_out <- openFile path WriteMode
+    saveImpl insts h_out
+    hClose h_out
+save path inst = do
+    h_out <- openFile path WriteMode
+    saveImpl [inst] h_out
+    hClose h_out
+
+saveImpl :: [Inst] -> Handle -> IO ()
+saveImpl (InstList insts : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x00)
+    saveImpl insts outfile
+    BIN.hPut outfile $ runPut (putWord64be 0xff)
+    saveImpl rest outfile
+
+saveImpl (ADD : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x01)
+    saveImpl rest outfile
+
+saveImpl (LDC num : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x02)
+    BIN.hPut outfile $ runPut (put num)
+    saveImpl rest outfile
+
+saveImpl (NIL : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x03)
+    saveImpl rest outfile
+
+saveImpl (SUB : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x04)
+    saveImpl rest outfile
+
+saveImpl (MUL : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x05)
+    saveImpl rest outfile
+
+saveImpl (DIV : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x06)
+    saveImpl rest outfile
+
+saveImpl (CONS : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x07)
+    saveImpl rest outfile
+
+saveImpl (CAR : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x08)
+    saveImpl rest outfile
+
+saveImpl (CDR : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x09)
+    saveImpl rest outfile
+
+saveImpl (CONSP : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0a)
+    saveImpl rest outfile
+
+saveImpl (SEL : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0b)
+    saveImpl rest outfile
+
+saveImpl (JOIN : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0c)
+    saveImpl rest outfile
+
+saveImpl (LD x y : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0d)
+    BIN.hPut outfile $ runPut (put x)
+    BIN.hPut outfile $ runPut (put y)
+    saveImpl rest outfile
+
+saveImpl (LDF (InstList insts) : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0e)
+    saveImpl ([InstList insts]) outfile
+    saveImpl rest outfile
+
+saveImpl (LDF insts : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0e)
+    saveImpl ([InstList [insts]]) outfile
+    saveImpl rest outfile
+
+saveImpl (AP : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x0f)
+    saveImpl rest outfile
+
+saveImpl (RTN : rest) outfile = do
+    BIN.hPut outfile $ runPut (putWord64be 0x10)
+    saveImpl rest outfile
+
+saveImpl [] _ = putStrLn "Finnish" 

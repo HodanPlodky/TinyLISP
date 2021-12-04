@@ -10,7 +10,7 @@ data ConsCell
     deriving Show
 
 data StackData
-    = DataNum Integer
+    = DataNum Int
     | Cons ConsCell
     | Code Inst
     deriving Show
