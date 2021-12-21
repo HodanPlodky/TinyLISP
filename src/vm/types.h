@@ -57,12 +57,13 @@ namespace secd {
     struct NilT {};
     const NilT Nil = NilT();
 
+    template <typename T> 
     class List;
 
-    template <typedef T> 
-    using Value = std::variant<NilT, T, List*>;
+    template <typename T> 
+    using Value = std::variant<NilT, T, List<T>*>;
 
-    template <typedef T> 
+    template <typename T> 
     class List {
         public:
             List() : value(Nil), rest(nullptr) {}
@@ -118,7 +119,7 @@ namespace secd {
     
 
     // four parts of secd
-    template <typedef T> 
+    template <typename T> 
     class Stack {
         public:
             Stack() : data(new List<T>()) {}
@@ -138,7 +139,7 @@ namespace secd {
                 return data->head();
             }
 
-            void push(Value val) {
+            void push(Value<T> val) {
                 data = data->prepend(val);
             }
 

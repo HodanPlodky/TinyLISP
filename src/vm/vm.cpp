@@ -34,7 +34,7 @@ long readLong(std::ifstream & stream) {
 secd::Code readInst(std::ifstream & stream) {
     long out;
     char buffer[8];
-    secd::Stack * s = new secd::Stack();
+    secd::Stack<inst::Inst> * s = new secd::Stack<inst::Inst>();
 
     while (!stream.eof()) {
         out = readLong(stream);
@@ -43,7 +43,8 @@ secd::Code readInst(std::ifstream & stream) {
                 break;
             }
             case 0x01 : {
-                s->push
+                inst::Inst i = std::make_shared<inst::ADD>(inst::ADD());
+                s->push(i);
                 break;
             }
             case 0x02 : {
