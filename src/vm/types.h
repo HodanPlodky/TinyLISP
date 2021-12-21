@@ -59,13 +59,15 @@ namespace secd {
 
     class List;
 
-    using Value = std::variant<NilT, int, List*>;
+    template <typedef T> 
+    using Value = std::variant<NilT, T, List*>;
 
+    template <typedef T> 
     class List {
         public:
             List() : value(Nil), rest(nullptr) {}
-            List(Value val) : value(val), rest(nullptr) {}
-            List(Value val, List * rest) : value(val), rest(rest) {}
+            List(Value<T> val) : value(val), rest(nullptr) {}
+            List(Value<T> val, List * rest) : value(val), rest(rest) {}
 
             bool empty() const {
                 return std::holds_alternative<NilT>(value) && rest == nullptr;
@@ -75,7 +77,7 @@ namespace secd {
                 return !std::holds_alternative<NilT>(value) && rest == nullptr;
             }
 
-            Value head() const {
+            Value<T> head() const {
                 return value;
             }
 
@@ -83,15 +85,15 @@ namespace secd {
                 return rest;
             }
 
-            List * prepend(Value val) {
-                return new List(val, this);
+            List * prepend(Value<T> val) {
+                return new List<T>(val, this);
             }
 
-            void append(Value  val) {
+            void append(Value<T> val) {
                 if (empty()) 
                     value = val;
                 else if (last()) 
-                    rest = new List(val);
+                    rest = new List<T>(val);
                 else 
                     rest->append(val);
             }
@@ -109,21 +111,22 @@ namespace secd {
                 }
             }*/
         private:
-            Value value;
-            List * rest;
+            Value<T> value;
+            List<T> * rest;
     };
 
     
 
     // four parts of secd
+    template <typedef T> 
     class Stack {
         public:
-            Stack() : data(new List()) {}
+            Stack() : data(new List<T>()) {}
             
             // memory leak is created here
             // todo GC, lets see
             // seems solved lets see more
-            Value pop() {
+            T pop() {
                 auto tmp = data->head();
                 auto tail = data->tail();
                 delete data;
@@ -131,7 +134,7 @@ namespace secd {
                 return tmp;
             }
 
-            Value top() const {
+            T top() const {
                 return data->head();
             }
 
@@ -143,7 +146,7 @@ namespace secd {
                 data->clearAll();
             }
         private:
-            List * data;
+            List<T> * data;
     };
 
     class Enviroment {
@@ -152,10 +155,10 @@ namespace secd {
 
     class Code {
         public:
-            Code() : data(new Stack()) {}
-            Code(Stack * data) : data(data) {}
+            Code() : data(new Stack<inst::Inst>()) {}
+            Code(Stack<inst::Inst> * data) : data(data) {}
         private:
-            Stack * data;
+            Stack<inst::Inst> * data;
     };
 
     class Dump {

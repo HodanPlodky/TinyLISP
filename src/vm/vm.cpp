@@ -43,6 +43,7 @@ secd::Code readInst(std::ifstream & stream) {
                 break;
             }
             case 0x01 : {
+                s->push
                 break;
             }
             case 0x02 : {
