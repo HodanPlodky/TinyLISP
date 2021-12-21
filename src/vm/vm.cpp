@@ -44,30 +44,59 @@ secd::Code readInst(std::ifstream & stream) {
             }
             case 0x01 : {
                 inst::Inst i = std::make_shared<inst::ADD>(inst::ADD());
-                s->push(i);
+                s->push(std::make_shared<inst::ADD>(inst::ADD()));
                 break;
             }
             case 0x02 : {
                 if (stream.eof())
                     throw std::runtime_error("After LDC must be number");
                 out = readLong(stream);
+                s->push(std::make_shared<inst::LDC>(inst::LDC(out)));
                 break;
             }
             case 0x03 : {
+                s->push(std::make_shared<inst::NIL>(inst::NIL()));
                 break;
             }
             case 0x04 : {
+                s->push(std::make_shared<inst::SUB>(inst::SUB()));
                 break;
             }
             case 0x05 : {
+                s->push(std::make_shared<inst::MUL>(inst::MUL()));
                 break;
             }
             case 0x06 : {
+                s->push(std::make_shared<inst::DIV>(inst::DIV()));
                 break;
             }
             case 0x07 : {
+                s->push(std::make_shared<inst::CONS>(inst::CONS()));
                 break;
             }
+            case 0x08 : {
+                s->push(std::make_shared<inst::CAR>(inst::CAR()));
+                break;
+            }
+            case 0x09 : {
+                s->push(std::make_shared<inst::CDR>(inst::CDR()));
+                break;
+            }
+            case 0x0a : {
+                s->push(std::make_shared<inst::CONSP>(inst::CONSP()));
+                break;
+            }
+            case 0x0b : {
+                s->push(std::make_shared<inst::SEL>(inst::SEL()));
+                break;
+            }
+            case 0x0c : {
+                s->push(std::make_shared<inst::JOIN>(inst::JOIN()));
+                break;
+            }
+            case 0xff : {
+                break;
+            } 
         }
     }
     return secd::Code(s);

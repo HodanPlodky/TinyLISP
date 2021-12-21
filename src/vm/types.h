@@ -25,6 +25,7 @@ namespace inst {
         std::shared_ptr<ADD>,
         std::shared_ptr<SUB>,
         std::shared_ptr<MUL>,
+        std::shared_ptr<DIV>,
         std::shared_ptr<CONS>,
         std::shared_ptr<CAR>,
         std::shared_ptr<CDR>,
@@ -57,18 +58,18 @@ namespace secd {
     struct NilT {};
     const NilT Nil = NilT();
 
-    template <typename T> 
+    template <typename T, typename C> 
     class List;
 
-    template <typename T> 
-    using Value = std::variant<NilT, T, List<T>*>;
+    template <typename T, typename C>
+    using Value = std::variant<NilT, T, C*>;
 
-    template <typename T> 
+    template <typename T, typename C> 
     class List {
         public:
             List() : value(Nil), rest(nullptr) {}
-            List(Value<T> val) : value(val), rest(nullptr) {}
-            List(Value<T> val, List * rest) : value(val), rest(rest) {}
+            List(Value<T, C> val) : value(val), rest(nullptr) {}
+            List(Value<T, C> val, List * rest) : value(val), rest(rest) {}
 
             bool empty() const {
                 return std::holds_alternative<NilT>(value) && rest == nullptr;
@@ -78,7 +79,7 @@ namespace secd {
                 return !std::holds_alternative<NilT>(value) && rest == nullptr;
             }
 
-            Value<T> head() const {
+            Value<T, C> head() const {
                 return value;
             }
 
@@ -86,15 +87,15 @@ namespace secd {
                 return rest;
             }
 
-            List * prepend(Value<T> val) {
-                return new List<T>(val, this);
+            List * prepend(Value<T, C> val) {
+                return new List<T, C>(val, this);
             }
 
-            void append(Value<T> val) {
+            void append(Value<T, C> val) {
                 if (empty()) 
                     value = val;
                 else if (last()) 
-                    rest = new List<T>(val);
+                    rest = new List<T, C>(val);
                 else 
                     rest->append(val);
             }
@@ -112,8 +113,8 @@ namespace secd {
                 }
             }*/
         private:
-            Value<T> value;
-            List<T> * rest;
+            Value<T, C> value;
+            List<T, C> * rest;
     };
 
     
@@ -122,12 +123,12 @@ namespace secd {
     template <typename T> 
     class Stack {
         public:
-            Stack() : data(new List<T>()) {}
+            Stack() : data(new List<T, Stack<T>>()) {}
             
             // memory leak is created here
             // todo GC, lets see
             // seems solved lets see more
-            T pop() {
+            Value<T, Stack<T>> pop() {
                 auto tmp = data->head();
                 auto tail = data->tail();
                 delete data;
@@ -135,11 +136,11 @@ namespace secd {
                 return tmp;
             }
 
-            T top() const {
+            Value<T, Stack<T>> top() const {
                 return data->head();
             }
 
-            void push(Value<T> val) {
+            void push(Value<T, Stack<T>> val) {
                 data = data->prepend(val);
             }
 
@@ -147,7 +148,7 @@ namespace secd {
                 data->clearAll();
             }
         private:
-            List<T> * data;
+            List<T, Stack<T>> * data;
     };
 
     class Enviroment {
