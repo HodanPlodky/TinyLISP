@@ -95,6 +95,8 @@ save path inst = do
     saveImpl [inst] h_out
     hClose h_out
 
+-- TODO please refactor
+
 saveImpl :: [Inst] -> Handle -> IO ()
 saveImpl (InstList insts : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0x00)

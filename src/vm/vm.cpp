@@ -18,83 +18,57 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <exception>
+#include <stdexcept>
 
-struct LDC;
-struct NIL;
-struct ADD;
-struct SUB;
-struct MUL;
-struct DIV;
-struct CONS;
-struct CAR;
-struct CDR;
-struct CONSP;
-struct SEL;
-struct JOIN;
-struct LD; 
-struct LDF;
-struct AP;
-struct RTN;
+#include "types.h"
 
-namespace inst {
-using Inst = std::variant<
-    std::shared_ptr<LDC>,
-    std::shared_ptr<NIL>,
-    std::shared_ptr<ADD>,
-    std::shared_ptr<SUB>,
-    std::shared_ptr<MUL>,
-    std::shared_ptr<CONS>,
-    std::shared_ptr<CAR>,
-    std::shared_ptr<CDR>,
-    std::shared_ptr<CONSP>,
-    std::shared_ptr<SEL>,
-    std::shared_ptr<JOIN>,
-    std::shared_ptr<LD>,
-    std::shared_ptr<LDF>,
-    std::shared_ptr<AP>,
-    std::shared_ptr<RTN>>;
-
-struct LDC {
-    LDC(int number) : number(number) {}
-    int number;
-};
-
-struct LD {
-    LD(int i, int j) : i(i), j(j) {}
-    int i, j;
-};
-
-struct LDF {
-    LDF(Inst inner) : inner(inner) {}
-    Inst inner;
-};
+long readLong(std::ifstream & stream) {
+    char buffer[8];
+    stream.read(buffer, 8);
+    return 
+        (long)buffer[7] | (long)buffer[6] << 8 | (long)buffer[5] << 16 | (long)buffer[4] << 24; 
+        (long)buffer[3] << 32 | (long)buffer[2]<< 40 | (long)buffer[1] << 48 | (long)buffer[0] << 56; 
 }
 
-struct ConsCell;
-
-using StackData = std::variant<
-    std::shared_ptr<ConsCell>, std::shared_ptr<int>>;
-
-struct ConsCell {
-    ConsCell(StackData car, StackData cdr) : 
-        car(car),
-        cdr(cdr) {}
-    StackData car, cdr;
-};
-
-ConsCell readInst(std::ifstream & stream) {
+secd::Code readInst(std::ifstream & stream) {
     long out;
     char buffer[8];
-    while (!stream.eof()) {
-        stream.read(buffer, sizeof out);
-        out = 
-            (long)buffer[7] | (long)buffer[6] << 8 | (long)buffer[5] << 16 | (long)buffer[4] << 24; 
-            (long)buffer[3] << 32 | (long)buffer[2]<< 40 | (long)buffer[1] << 48 | (long)buffer[0] << 56; 
-        switch (out) {
+    secd::Stack * s = new secd::Stack();
 
+    while (!stream.eof()) {
+        out = readLong(stream);
+        switch (out) {
+            case 0x00 : {
+                break;
+            }
+            case 0x01 : {
+                break;
+            }
+            case 0x02 : {
+                if (stream.eof())
+                    throw std::runtime_error("After LDC must be number");
+                out = readLong(stream);
+                break;
+            }
+            case 0x03 : {
+                break;
+            }
+            case 0x04 : {
+                break;
+            }
+            case 0x05 : {
+                break;
+            }
+            case 0x06 : {
+                break;
+            }
+            case 0x07 : {
+                break;
+            }
         }
     }
-    return ConsCell(std::shared_ptr<int>(0), std::shared_ptr<int>(0));
+    return secd::Code(s);
 } 
 
 int main(int argc, char ** argv) {
