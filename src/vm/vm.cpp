@@ -34,7 +34,7 @@ long readLong(std::ifstream & stream) {
 secd::Code readInst(std::ifstream & stream) {
     long out;
     char buffer[8];
-    secd::Stack<inst::Inst> * s = new secd::Stack<inst::Inst>();
+    auto code = secd::Code();
 
     while (!stream.eof()) {
         out = readLong(stream);
@@ -43,63 +43,74 @@ secd::Code readInst(std::ifstream & stream) {
                 break;
             }
             case 0x01 : {
-                inst::Inst i = std::make_shared<inst::ADD>(inst::ADD());
-                s->push(std::make_shared<inst::ADD>(inst::ADD()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::ADD>(inst::ADD())));
                 break;
             }
             case 0x02 : {
                 if (stream.eof())
                     throw std::runtime_error("After LDC must be number");
                 out = readLong(stream);
-                s->push(std::make_shared<inst::LDC>(inst::LDC(out)));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::LDC>(inst::LDC(out))));
                 break;
             }
             case 0x03 : {
-                s->push(std::make_shared<inst::NIL>(inst::NIL()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::NIL>(inst::NIL())));
                 break;
             }
             case 0x04 : {
-                s->push(std::make_shared<inst::SUB>(inst::SUB()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::SUB>(inst::SUB())));
                 break;
             }
             case 0x05 : {
-                s->push(std::make_shared<inst::MUL>(inst::MUL()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::MUL>(inst::MUL())));
                 break;
             }
             case 0x06 : {
-                s->push(std::make_shared<inst::DIV>(inst::DIV()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::DIV>(inst::DIV())));
                 break;
             }
             case 0x07 : {
-                s->push(std::make_shared<inst::CONS>(inst::CONS()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::CONS>(inst::CONS())));
                 break;
             }
             case 0x08 : {
-                s->push(std::make_shared<inst::CAR>(inst::CAR()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::CAR>(inst::CAR())));
                 break;
             }
             case 0x09 : {
-                s->push(std::make_shared<inst::CDR>(inst::CDR()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::CDR>(inst::CDR())));
                 break;
             }
             case 0x0a : {
-                s->push(std::make_shared<inst::CONSP>(inst::CONSP()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::CONSP>(inst::CONSP())));
                 break;
             }
             case 0x0b : {
-                s->push(std::make_shared<inst::SEL>(inst::SEL()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::SEL>(inst::SEL())));
                 break;
             }
             case 0x0c : {
-                s->push(std::make_shared<inst::JOIN>(inst::JOIN()));
+                code.add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::JOIN>(inst::JOIN())));
                 break;
             }
             case 0xff : {
                 break;
-            } 
+            }
         }
     }
-    return secd::Code(s);
+    return code;
 } 
 
 int main(int argc, char ** argv) {

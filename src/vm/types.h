@@ -1,5 +1,7 @@
 #include <variant>
 #include <memory>
+#include <stack>
+#include <stdexcept>
 
 namespace inst {
     struct LDC;
@@ -30,7 +32,7 @@ namespace inst {
         std::shared_ptr<CAR>,
         std::shared_ptr<CDR>,
         std::shared_ptr<CONSP>,
-        std::shared_ptr<SEL>,
+        std::shared_ptr<SEL>,    
         std::shared_ptr<JOIN>,
         std::shared_ptr<LD>,
         std::shared_ptr<LDF>,
@@ -56,100 +58,72 @@ namespace inst {
 namespace secd {
     // data in secd
     struct NilT {};
-    const NilT Nil = NilT();
+    const std::shared_ptr<NilT> Nil = 
+        std::make_shared<NilT>(NilT());
 
-    template <typename T, typename C> 
+    template <typename T> 
     class List;
 
-    template <typename T, typename C>
-    using Value = std::variant<NilT, T, C*>;
+    template <typename T>
+    struct ConsCell;
 
-    template <typename T, typename C> 
-    class List {
-        public:
-            List() : value(Nil), rest(nullptr) {}
-            List(Value<T, C> val) : value(val), rest(nullptr) {}
-            List(Value<T, C> val, List * rest) : value(val), rest(rest) {}
+    template <typename T>
+    using Value = std::variant<
+        std::shared_ptr<NilT>, 
+        std::shared_ptr<T>, 
+        std::shared_ptr<ConsCell<T>>>;
 
-            bool empty() const {
-                return std::holds_alternative<NilT>(value) && rest == nullptr;
-            }
-
-            bool last() const {
-                return !std::holds_alternative<NilT>(value) && rest == nullptr;
-            }
-
-            Value<T, C> head() const {
-                return value;
-            }
-
-            List * tail() const {
-                return rest;
-            }
-
-            List * prepend(Value<T, C> val) {
-                return new List<T, C>(val, this);
-            }
-
-            void append(Value<T, C> val) {
-                if (empty()) 
-                    value = val;
-                else if (last()) 
-                    rest = new List<T, C>(val);
-                else 
-                    rest->append(val);
-            }
-
-            void clearAll() {
-                if (rest != nullptr) {
-                    rest->clearAll();
-                    delete rest;
-                }
-            }
-            /*
-            ~List() {
-                if (rest != nullptr) {
-                    delete rest;
-                }
-            }*/
-        private:
-            Value<T, C> value;
-            List<T, C> * rest;
+    template <typename T>
+    struct ConsCell {
+        Value<T> car;
+        Value<T> cdr;
     };
 
+    template <typename T>
+    Value<T> car(Value<T> val) {
+        if (!std::holds_alternative<ConsCell<T>>(val)) {
+            std::runtime_error("car error (value is not a cons cell)");
+        }
+        auto & conscell = std::get<ConsCell<T>>(val);
+        return *val.car;
+    }
     
+    template <typename T>
+    Value<T> cdr(Value<T> val) {
+        if (!std::holds_alternative<ConsCell<T>>(val)) {
+            std::runtime_error("car error (value is not a cons cell)");
+        }
+        auto & conscell = std::get<ConsCell<T>>(val);
+        return val.cdr;
+    }
+
+    template <typename T>
+    Value<T> cons(Value<T> car, Value<T> cdr) {
+        auto cell = make_shared<ConsCell<T>>(ConsCell<T>());
+        cell->car = car;
+        cell->cdr = cdr;
+        return cell;
+    }
+
+    template <typename T>
+    Value<T> append(Value<T> cell, Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
+            auto retcell = make_shared<ConsCell<T>>(ConsCell<T>());
+            retcell->car = val;
+            retcell->cdr = cell;
+            return retcell;
+        }
+        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
+            auto cdr = std::get<std::shared_ptr<ConsCell<T>>>(cell)->cdr;
+            return append(cdr, val);
+        }
+        std::runtime_error("cannot append");
+        return Nil;
+    }
 
     // four parts of secd
-    template <typename T> 
-    class Stack {
-        public:
-            Stack() : data(new List<T, Stack<T>>()) {}
-            
-            // memory leak is created here
-            // todo GC, lets see
-            // seems solved lets see more
-            Value<T, Stack<T>> pop() {
-                auto tmp = data->head();
-                auto tail = data->tail();
-                delete data;
-                data = tail;
-                return tmp;
-            }
-
-            Value<T, Stack<T>> top() const {
-                return data->head();
-            }
-
-            void push(Value<T, Stack<T>> val) {
-                data = data->prepend(val);
-            }
-
-            ~Stack() {
-                data->clearAll();
-            }
-        private:
-            List<T, Stack<T>> * data;
-    };
+    template <typename T>
+    using Stack = std::stack<Value<T>>;
 
     class Enviroment {
 
@@ -157,10 +131,19 @@ namespace secd {
 
     class Code {
         public:
-            Code() : data(new Stack<inst::Inst>()) {}
-            Code(Stack<inst::Inst> * data) : data(data) {}
+            Code() : data(Nil) {}
+
+            void add(Value<inst::Inst> val) {
+                data = append(data, val);
+            }
+
+            inst::Inst head() {
+                return 
+                    std::make_shared<inst::ADD>(inst::ADD());
+            }
         private:
-            Stack<inst::Inst> * data;
+
+            Value<inst::Inst> data;
     };
 
     class Dump {
