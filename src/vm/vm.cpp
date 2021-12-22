@@ -176,51 +176,40 @@ void run(
     secd::Dump & dump
 ) {
     while(!code->empty()) {
-        traverse_stack(datastack);
-        secd::showInsts(code->data);
-        std::cout << std::endl;
         if (code->isHeadList()) {
-            /*run(
-                std::make_shared<secd::Code>(std::move(secd::Code(code->next()))), 
-                datastack,
-                dump
-            );*/
             auto list = std::move(code->next());
-            std::cout << "head : ";
-            secd::showInsts(code->data);
-            std::cout << std::endl;
             code = std::make_shared<secd::Code>(secd::Code(secd::appendLists(list, code->getData())));
             continue;
         }
         auto instruction = code->nextInst();
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
-            std::cout << "LCD" << std::endl;
+            //std::cout << "LCD" << std::endl;
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
             datastack.push(std::make_shared<int>(ldc->number));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
-            std::cout << "ADD" << std::endl;
+            //std::cout << "ADD" << std::endl;
             binaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
-            std::cout << "SUB" << std::endl;
+            //std::cout << "SUB" << std::endl;
             binaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
-            std::cout << "MUL" << std::endl;
+            //std::cout << "MUL" << std::endl;
             binaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
-            std::cout << "DIV" << std::endl;
+            //std::cout << "DIV" << std::endl;
             binaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
-            std::cout << "JOIN" << std::endl;
+            //std::cout << "JOIN" << std::endl;
             auto recovered = dump.recover();
             code->prepend(recovered);
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
-            std::cout << "SEL" << std::endl;
+            //std::cout << "SEL" << std::endl;
             if (datastack.empty())
                 throw std::runtime_error("SEL needs one argument on stack");
             auto tmp = datastack.top();
