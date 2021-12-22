@@ -153,18 +153,43 @@ void binaryop(
     }
 }
 
+void traverse_stack(secd::Stack<int> & st) {
+    if(st.empty())
+        return;
+    secd::Value<int> x = st.top();
+    if (std::holds_alternative<std::shared_ptr<int>>(x)) {
+        auto tmp = *std::get<std::shared_ptr<int>>(x);
+        std::cout << tmp << std::endl;
+    }
+    else {
+        std::cout << "NaN" << std::endl;
+    }
+    st.pop();
+    traverse_stack(st);
+    st.push(x);
+} 
+
+
 void run(
     std::shared_ptr<secd::Code> code,
     secd::Stack<int> & datastack,
     secd::Dump & dump
 ) {
     while(!code->empty()) {
+        traverse_stack(datastack);
+        secd::showInsts(code->data);
+        std::cout << std::endl;
         if (code->isHeadList()) {
-            run(
+            /*run(
                 std::make_shared<secd::Code>(std::move(secd::Code(code->next()))), 
                 datastack,
                 dump
-            );
+            );*/
+            auto list = std::move(code->next());
+            std::cout << "head : ";
+            secd::showInsts(code->data);
+            std::cout << std::endl;
+            code = std::make_shared<secd::Code>(secd::Code(secd::appendLists(list, code->getData())));
             continue;
         }
         auto instruction = code->nextInst();
@@ -211,8 +236,10 @@ void run(
             }
             else {
                 code->next();
-                auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
-                dump.dump(code->next());
+                auto nexttmp = std::move(code->next());
+                auto ncode = std::make_shared<secd::Code>(secd::Code(nexttmp));
+                auto tmpdump = std::move(code->getData());
+                dump.dump(tmpdump);
                 code = std::move(ncode);
             }
         }

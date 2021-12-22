@@ -2,6 +2,7 @@
 #include <memory>
 #include <stack>
 #include <stdexcept>
+#include <sstream>
 
 namespace inst {
     struct LDC;
@@ -38,7 +39,7 @@ namespace inst {
         std::shared_ptr<LDF>,
         std::shared_ptr<AP>,
         std::shared_ptr<RTN>>;
-
+    
     struct LDC {
         LDC(int number) : number(number) {}
         int number;
@@ -53,6 +54,35 @@ namespace inst {
         LDF(Inst inner) : inner(inner) {}
         Inst inner;
     };
+
+    void show(Inst instruction) {
+        if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
+            auto tmp = std::get<std::shared_ptr<LDC>>(instruction);
+            std::cout << "LCD" << tmp->number;
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
+            std::cout << "ADD";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
+            std::cout << "SUB";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
+            std::cout << "MUL";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
+            std::cout << "DIV";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
+            std::cout << "JOIN";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
+            std::cout << "SEL";
+        }
+        else {
+            std::cout << "mate too fast";
+        }
+
+    }
 }
 
 namespace secd {
@@ -72,7 +102,7 @@ namespace secd {
         std::shared_ptr<NilT>, 
         std::shared_ptr<T>, 
         std::shared_ptr<ConsCell<T>>>;
-
+    
     template <typename T>
     struct ConsCell {
         Value<T> car;
@@ -97,6 +127,23 @@ namespace secd {
         return conscell->cdr;
     }
 
+    void showInsts(Value<inst::Inst> val) {
+        if (std::holds_alternative<std::shared_ptr<NilT>>(val)) {
+            std::cout << " null ";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
+            auto tmp = std::get<std::shared_ptr<inst::Inst>>(val);
+            inst::show(*tmp);
+        }
+        else if (std::holds_alternative<std::shared_ptr<ConsCell<inst::Inst>>>(val)) {
+            std::cout << "( ";
+            showInsts(car(val));
+            std::cout << " ";
+            showInsts(cdr(val));
+            std::cout << ")";
+        }
+    }
+
     template <typename T>
     Value<T> cons(Value<T> car, Value<T> cdr) {
         auto cell = make_shared<ConsCell<T>>(ConsCell<T>());
@@ -118,6 +165,25 @@ namespace secd {
         return std::move(Nil);
     }
 
+    template <typename T>
+    Value<T> appendLists(Value<T> cell, Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
+            if (
+                std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val) ||
+                std::holds_alternative<std::shared_ptr<NilT>>(val)
+            ) {
+                return val;
+            }
+            return cons<T>(std::move(val), std::move(Nil));
+        }
+        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
+            auto tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
+            return cons(std::move(tmp->car), std::move(appendLists(tmp->cdr, val)));
+        }
+        std::runtime_error("cannot append");
+        return std::move(Nil);
+    }
+
     // four parts of secd
     template <typename T>
     using Stack = std::stack<Value<T>>;
@@ -132,7 +198,7 @@ namespace secd {
             Code(Value<inst::Inst> data) : data(data) {}
 
             void prepend(Value<inst::Inst> val) {
-                data = cons(val, data);
+                data = std::move(cons(val, data));
             }
 
             void add(Value<inst::Inst> val) {
@@ -146,10 +212,16 @@ namespace secd {
             }
 
             Value<inst::Inst> head() {
+                if(empty()) {
+                    return Nil;
+                }
                 return car(data);
             }
 
             Value<inst::Inst> next() {
+                if(empty()) {
+                    return Nil;
+                }
                 auto res = std::move(car(data));
                 data = std::move(cdr(data));
                 return res;
@@ -158,7 +230,7 @@ namespace secd {
             inst::Inst headInst() {
                 auto res = std::move(car(data));
                 if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
-                    std::runtime_error("car in not instruction");
+                    throw std::runtime_error("car in not instruction");
 
                 return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
             }
@@ -170,10 +242,13 @@ namespace secd {
                     data = std::move(Nil);
                     return *tmp;
                 }
+                if (empty()) {
+                    throw std::runtime_error("??????");
+                }
                 auto res = std::move(car(data));
                 data = std::move(cdr(data));
                 if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
-                    std::runtime_error("car in not instruction");
+                    throw std::runtime_error("car in not instruction");
 
                 return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
             }
@@ -183,9 +258,10 @@ namespace secd {
             }
 
             bool empty() {
-                return std::holds_alternative<std::shared_ptr<NilT>>(data);
+                if (std::holds_alternative<std::shared_ptr<NilT>>(data))
+                    return true;
+                return false;
             }
-        private:
             Value<inst::Inst> data;
     };
 
