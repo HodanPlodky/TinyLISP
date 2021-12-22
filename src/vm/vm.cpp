@@ -20,6 +20,7 @@
 #include <vector>
 #include <exception>
 #include <stdexcept>
+#include <functional>
 
 #include "types.h"
 
@@ -125,47 +126,67 @@ void writeValue(secd::Value<int> val) {
     }
 }
 
-void run(std::shared_ptr<secd::Code> code) {
-    auto datastack = secd::Stack<int>();
+void binaryop(
+    secd::Stack<int> & datastack, 
+    std::function<int(int, int)> op, 
+    std::string name
+) {
+    if (datastack.empty())
+        throw std::runtime_error("ADD require two arguments on stack found 0");
+    auto x = datastack.top();
+    datastack.pop();
+    if (datastack.empty())
+        throw std::runtime_error("ADD require two arguments on stack found 1");
+    auto y = datastack.top();
+    datastack.pop();
+    if (
+        std::holds_alternative<std::shared_ptr<int>>(x) &&
+        std::holds_alternative<std::shared_ptr<int>>(y)
+    ) {
+        int nx = *std::get<std::shared_ptr<int>>(x);
+        int ny = *std::get<std::shared_ptr<int>>(y);
+        datastack.push(std::make_shared<int>(op(nx, ny)));
+    }
+    else {
+        throw std::runtime_error(
+            name + std::string(" requires two numbers, got different type"));
+    }
+}
+
+void run(
+    std::shared_ptr<secd::Code> code,
+    secd::Stack<int> & datastack
+) {
     while(!code->empty()) {
         if (code->isHeadList()) {
-            code = std::make_shared<secd::Code>(std::move(secd::Code(code->head())));
+            run(
+                std::make_shared<secd::Code>(std::move(secd::Code(code->next()))), 
+                datastack
+            );
             continue;
         }
         auto instruction = code->nextInst();
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
-            std::cout << "LDC" << std::endl;
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
-            std::cout << "number : " << ldc->number << std::endl;
             datastack.push(std::make_shared<int>(ldc->number));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
-            std::cout << "ADD" << std::endl;
             std::get<std::shared_ptr<inst::ADD>>(instruction);
-            if (datastack.empty())
-                throw std::runtime_error("ADD require two arguments on stack found 0");
-            auto x = datastack.top();
-            datastack.pop();
-            if (datastack.empty())
-                throw std::runtime_error("ADD require two arguments on stack found 1");
-            auto y = datastack.top();
-            datastack.pop();
-            if (
-                std::holds_alternative<std::shared_ptr<int>>(x) &&
-                std::holds_alternative<std::shared_ptr<int>>(y)
-            ) {
-                int nx = *std::get<std::shared_ptr<int>>(x);
-                int ny = *std::get<std::shared_ptr<int>>(y);
-                datastack.push(std::make_shared<int>(nx + ny));
-            }
-            else {
-                throw std::runtime_error("ADD requires two numbers, got different type");
-            }
+            binaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
+            std::get<std::shared_ptr<inst::SUB>>(instruction);
+            binaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
+            std::get<std::shared_ptr<inst::MUL>>(instruction);
+            binaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
+            std::get<std::shared_ptr<inst::DIV>>(instruction);
+            binaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
         }
     }
-
-    if (!datastack.empty())
-        writeValue(datastack.top());
 }
 
 int main(int argc, char ** argv) {
@@ -173,7 +194,11 @@ int main(int argc, char ** argv) {
     std::ifstream file(argv[1], std::ios::in | std::ios::binary);
     auto code = readInst(file);
     try {
-        run(code);
+        auto datastack = secd::Stack<int>();
+        run(code, datastack);
+
+        if (!datastack.empty())
+            writeValue(datastack.top());
     }
     catch(const std::exception& e) {
         std::cout << "runtime error : " << e.what() << std::endl;
