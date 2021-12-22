@@ -81,44 +81,41 @@ namespace secd {
 
     template <typename T>
     Value<T> car(Value<T> val) {
-        if (!std::holds_alternative<ConsCell<T>>(val)) {
+        if (!std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val)) {
             std::runtime_error("car error (value is not a cons cell)");
         }
-        auto & conscell = std::get<ConsCell<T>>(val);
-        return *val.car;
+        auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
+        return conscell->car;
     }
     
     template <typename T>
     Value<T> cdr(Value<T> val) {
-        if (!std::holds_alternative<ConsCell<T>>(val)) {
-            std::runtime_error("car error (value is not a cons cell)");
+        if (!std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val)) {
+            std::runtime_error("cdr error (value is not a cons cell)");
         }
-        auto & conscell = std::get<ConsCell<T>>(val);
-        return val.cdr;
+        auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
+        return conscell->cdr;
     }
 
     template <typename T>
     Value<T> cons(Value<T> car, Value<T> cdr) {
         auto cell = make_shared<ConsCell<T>>(ConsCell<T>());
-        cell->car = car;
-        cell->cdr = cdr;
-        return cell;
+        cell->car = std::move(car);
+        cell->cdr = std::move(cdr);
+        return std::move(cell);
     }
 
     template <typename T>
     Value<T> append(Value<T> cell, Value<T> val) {
         if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
-            auto retcell = make_shared<ConsCell<T>>(ConsCell<T>());
-            retcell->car = val;
-            retcell->cdr = cell;
-            return retcell;
+            return cons<T>(std::move(val), std::move(Nil));
         }
         if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            auto cdr = std::get<std::shared_ptr<ConsCell<T>>>(cell)->cdr;
-            return append(cdr, val);
+            auto tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
+            return cons(std::move(tmp->car), std::move(append(tmp->cdr, val)));
         }
         std::runtime_error("cannot append");
-        return Nil;
+        return std::move(Nil);
     }
 
     // four parts of secd
@@ -131,18 +128,54 @@ namespace secd {
 
     class Code {
         public:
-            Code() : data(Nil) {}
+            Code() : data(std::move(Nil)) {}
+            Code(Value<inst::Inst> data) : data(data) {}
 
             void add(Value<inst::Inst> val) {
-                data = append(data, val);
+                data = std::move(append(data, val));
             }
 
-            inst::Inst head() {
+            bool isHeadList() {
                 return 
-                    std::make_shared<inst::ADD>(inst::ADD());
+                    std::holds_alternative<std::shared_ptr<ConsCell<inst::Inst>>>
+                    (car(data));
+            }
+
+            Value<inst::Inst> head() {
+                return car(data);
+            }
+
+            Value<inst::Inst> next() {
+                auto res = std::move(car(data));
+                data = std::move(cdr(data));
+                return res;
+            }
+
+            inst::Inst headInst() {
+                auto res = std::move(car(data));
+                if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
+                    std::runtime_error("car in not instruction");
+
+                return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
+            }
+
+            inst::Inst nextInst() {
+                auto res = std::move(car(data));
+                data = std::move(cdr(data));
+                if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
+                    std::runtime_error("car in not instruction");
+
+                return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
+            }
+
+            Value<inst::Inst> getData() {
+                return data;
+            }
+
+            bool empty() {
+                return std::holds_alternative<std::shared_ptr<NilT>>(data);
             }
         private:
-
             Value<inst::Inst> data;
     };
 
