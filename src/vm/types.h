@@ -131,6 +131,10 @@ namespace secd {
             Code() : data(std::move(Nil)) {}
             Code(Value<inst::Inst> data) : data(data) {}
 
+            void prepend(Value<inst::Inst> val) {
+                data = cons(val, data);
+            }
+
             void add(Value<inst::Inst> val) {
                 data = std::move(append(data, val));
             }
@@ -160,6 +164,12 @@ namespace secd {
             }
 
             inst::Inst nextInst() {
+                // in case branching creates only instruction
+                if (std::holds_alternative<std::shared_ptr<inst::Inst>>(data)) {
+                    auto tmp = std::get<std::shared_ptr<inst::Inst>>(data);
+                    data = std::move(Nil);
+                    return *tmp;
+                }
                 auto res = std::move(car(data));
                 data = std::move(cdr(data));
                 if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
@@ -180,6 +190,21 @@ namespace secd {
     };
 
     class Dump {
+        public:
+            Dump() : data(Stack<inst::Inst>()) {}
 
+            void dump(Value<inst::Inst> val) {
+                data.push(val);
+            }
+
+            Value<inst::Inst> recover() {
+                if (data.empty())
+                    throw std::runtime_error("Cannot recover dump is empty");
+                auto tmp = std::move(data.top());
+                data.pop();
+                return tmp;
+            }
+        private:
+            Stack<inst::Inst> data;
     };
 }

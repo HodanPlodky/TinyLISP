@@ -155,36 +155,66 @@ void binaryop(
 
 void run(
     std::shared_ptr<secd::Code> code,
-    secd::Stack<int> & datastack
+    secd::Stack<int> & datastack,
+    secd::Dump & dump
 ) {
     while(!code->empty()) {
         if (code->isHeadList()) {
             run(
                 std::make_shared<secd::Code>(std::move(secd::Code(code->next()))), 
-                datastack
+                datastack,
+                dump
             );
             continue;
         }
         auto instruction = code->nextInst();
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
+            std::cout << "LCD" << std::endl;
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
             datastack.push(std::make_shared<int>(ldc->number));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
-            std::get<std::shared_ptr<inst::ADD>>(instruction);
+            std::cout << "ADD" << std::endl;
             binaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
-            std::get<std::shared_ptr<inst::SUB>>(instruction);
+            std::cout << "SUB" << std::endl;
             binaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
-            std::get<std::shared_ptr<inst::MUL>>(instruction);
+            std::cout << "MUL" << std::endl;
             binaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
-            std::get<std::shared_ptr<inst::DIV>>(instruction);
+            std::cout << "DIV" << std::endl;
             binaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
+            std::cout << "JOIN" << std::endl;
+            auto recovered = dump.recover();
+            code->prepend(recovered);
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
+            std::cout << "SEL" << std::endl;
+            if (datastack.empty())
+                throw std::runtime_error("SEL needs one argument on stack");
+            auto tmp = datastack.top();
+            datastack.pop();
+            if (!std::holds_alternative<std::shared_ptr<int>>(tmp))
+                throw std::runtime_error("SEL needs one number on stack, found different type");
+            int number = *std::get<std::shared_ptr<int>>(tmp);
+            if (number != 0) {
+                auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
+                code->next();
+                dump.dump(code->next());
+                code = std::move(ncode);
+            }
+            else {
+                code->next();
+                auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
+                dump.dump(code->next());
+                code = std::move(ncode);
+            }
         }
     }
 }
@@ -195,7 +225,8 @@ int main(int argc, char ** argv) {
     auto code = readInst(file);
     try {
         auto datastack = secd::Stack<int>();
-        run(code, datastack);
+        auto dump = secd::Dump();
+        run(code, datastack, dump);
 
         if (!datastack.empty())
             writeValue(datastack.top());
