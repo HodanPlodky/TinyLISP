@@ -78,6 +78,12 @@ namespace inst {
         else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
             std::cout << "SEL";
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::NIL>>(instruction)) {
+            std::cout << "NIL";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
+            std::cout << "CONS";
+        }
         else {
             std::cout << "mate too fast";
         }
@@ -145,8 +151,27 @@ namespace secd {
     }
 
     template <typename T>
+    void showValue(Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<T>>(val)) {
+            auto tmp = *std::get<std::shared_ptr<T>>(val);
+            std::cout << tmp;
+        }
+        else if (std::holds_alternative<std::shared_ptr<secd::NilT>>(val)) {
+            std::cout << "()";
+        }
+        else {
+            std::cout << "( ";
+            showValue(car(val));
+            std::cout << " ";
+            showValue(cdr(val));
+            std::cout << " )";
+        }
+
+    }
+
+    template <typename T>
     Value<T> cons(Value<T> car, Value<T> cdr) {
-        auto cell = make_shared<ConsCell<T>>(ConsCell<T>());
+        auto cell = std::make_shared<ConsCell<T>>(ConsCell<T>());
         cell->car = std::move(car);
         cell->cdr = std::move(cdr);
         return std::move(cell);

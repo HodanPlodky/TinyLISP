@@ -128,7 +128,7 @@ void writeValue(secd::Value<int> val) {
 
 void binaryop(
     secd::Stack<int> & datastack, 
-    std::function<int(int, int)> op, 
+    std::function<secd::Value<int>(secd::Value<int>, secd::Value<int>)> op, 
     std::string name
 ) {
     if (datastack.empty())
@@ -139,33 +139,40 @@ void binaryop(
         throw std::runtime_error("ADD require two arguments on stack found 1");
     auto y = datastack.top();
     datastack.pop();
-    if (
-        std::holds_alternative<std::shared_ptr<int>>(x) &&
-        std::holds_alternative<std::shared_ptr<int>>(y)
-    ) {
-        int nx = *std::get<std::shared_ptr<int>>(x);
-        int ny = *std::get<std::shared_ptr<int>>(y);
-        datastack.push(std::make_shared<int>(op(nx, ny)));
-    }
-    else {
-        throw std::runtime_error(
-            name + std::string(" requires two numbers, got different type"));
-    }
+    datastack.push(op(x, y));
+}
+
+void numbinaryop(
+    secd::Stack<int> & datastack, 
+    std::function<int(int, int)> op, 
+    std::string name
+) {
+    auto numop = [name, op](secd::Value<int> x, secd::Value<int> y) -> secd::Value<int>{
+        if (
+            std::holds_alternative<std::shared_ptr<int>>(x) &&
+            std::holds_alternative<std::shared_ptr<int>>(y)
+        ) {
+            int nx = *std::get<std::shared_ptr<int>>(x);
+            int ny = *std::get<std::shared_ptr<int>>(y);
+            return std::make_shared<int>(op(nx, ny));
+        }
+        else {
+            throw std::runtime_error(
+                name + std::string(" requires two numbers, got different type"));
+        }
+        return secd::Nil;
+    };
+    binaryop(datastack, numop, name);
 }
 
 void traverse_stack(secd::Stack<int> & st) {
     if(st.empty())
         return;
     secd::Value<int> x = st.top();
-    if (std::holds_alternative<std::shared_ptr<int>>(x)) {
-        auto tmp = *std::get<std::shared_ptr<int>>(x);
-        std::cout << tmp << std::endl;
-    }
-    else {
-        std::cout << "NaN" << std::endl;
-    }
     st.pop();
     traverse_stack(st);
+    secd::showValue(x);
+    std::cout << std::endl;
     st.push(x);
 } 
 
@@ -173,9 +180,15 @@ void traverse_stack(secd::Stack<int> & st) {
 void run(
     std::shared_ptr<secd::Code> code,
     secd::Stack<int> & datastack,
-    secd::Dump & dump
+    secd::Dump & dump,
+    bool verbose
 ) {
     while(!code->empty()) {
+        if (verbose) {
+            traverse_stack(datastack);
+            secd::showInsts(code->getData());
+            std::cout << std::endl;
+        }
         if (code->isHeadList()) {
             auto list = std::move(code->next());
             code = std::make_shared<secd::Code>(secd::Code(secd::appendLists(list, code->getData())));
@@ -189,19 +202,19 @@ void run(
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
             //std::cout << "ADD" << std::endl;
-            binaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
+            numbinaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
             //std::cout << "SUB" << std::endl;
-            binaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
+            numbinaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
             //std::cout << "MUL" << std::endl;
-            binaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
+            numbinaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
             //std::cout << "DIV" << std::endl;
-            binaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
+            numbinaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
             //std::cout << "JOIN" << std::endl;
@@ -220,7 +233,7 @@ void run(
             if (number != 0) {
                 auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
                 code->next();
-                dump.dump(code->next());
+                dump.dump(code->getData());
                 code = std::move(ncode);
             }
             else {
@@ -232,20 +245,32 @@ void run(
                 code = std::move(ncode);
             }
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::NIL>>(instruction)) {
+            datastack.push(secd::Nil);
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
+            auto op = [](secd::Value<int> x, secd::Value<int> y) -> secd::Value<int> {
+                return secd::cons(x, y);
+            };
+            binaryop(datastack, op, "CONS");
+        }
     }
 }
 
 int main(int argc, char ** argv) {
-    if (argc != 2) return 1;
+    if (argc < 2) return 1;
     std::ifstream file(argv[1], std::ios::in | std::ios::binary);
     auto code = readInst(file);
+    bool verbose = false;
+    if (argc >= 3) {
+        verbose = std::string(argv[2]) == "-v";
+    }
     try {
         auto datastack = secd::Stack<int>();
         auto dump = secd::Dump();
-        run(code, datastack, dump);
+        run(code, datastack, dump, verbose);
 
-        if (!datastack.empty())
-            writeValue(datastack.top());
+        traverse_stack(datastack);
     }
     catch(const std::exception& e) {
         std::cout << "runtime error : " << e.what() << std::endl;

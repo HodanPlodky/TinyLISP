@@ -9,7 +9,7 @@ echo "###################"
 echo " "
 
 
-./main basic.lisp res.out
+./main $1 res.out
 
 echo " "
 echo "###################"
