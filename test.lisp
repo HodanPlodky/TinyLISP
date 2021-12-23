@@ -30,5 +30,8 @@
         (cons (cons 1 (cons 2 null)) (cons 3 null))))
 (+ 0 1)
 
+( + 1 ((lambda (x y) (+ x y)) 10 20))
+(* 2 ((lambda (x y) (if (> x y) x y)) 20 32))
+
 (+ 2 4)
 null

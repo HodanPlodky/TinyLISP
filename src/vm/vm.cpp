@@ -248,6 +248,7 @@ void run(
     while(!code->empty()) {
         if (verbose) {
             traverse_stack(datastack);
+            std::cout << std::endl;
             secd::showValue(code->getData());
             std::cout << std::endl;
         }
@@ -345,8 +346,20 @@ void run(
             datastack.pop();
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
             dump.dump(dumpdata);
+            code = std::make_shared<secd::Code>(car(closure));
+            env.set(cons(args, cdr(closure)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
+            auto res = datastack.top();
+            auto recovered = dump.recover();
+            datastack.set(secd::car(recovered));
+            datastack.push(res);
+            code = std::make_shared<secd::Code>(secd::car(secd::cdr(recovered)));
+            auto tmp = secd::cdr(secd::cdr(recovered));
+            if (std::holds_alternative<std::shared_ptr<secd::NilT>>(tmp))
+                env.set(secd::Nil);
+            else
+                env.set(secd::car(secd::cdr(secd::cdr(recovered))));
         }
         else {
             throw std::runtime_error("Not implemented");

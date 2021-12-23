@@ -303,6 +303,11 @@ namespace secd {
             bool empty() {
                 return std::holds_alternative<std::shared_ptr<NilT>>(data);
             }
+
+            void set(Value<T> val) {
+                data = std::move(val);
+            }
+
         private:
             Value<T> data;
     };
@@ -312,13 +317,13 @@ namespace secd {
             Enviroment() : data(std::move(Nil)) {}
 
             Value<Data> get(int x, int y) {
-                auto tmp = std::move(data);
+                auto tmp = data;
                 for (int i = 0; i < x; i++) {
-                    tmp = std::move(cdr(tmp));
+                    tmp = cdr(tmp);
                 }
-                tmp = std::move(car(tmp));
+                tmp = car(tmp);
                 for (int i = 0; i < y; i++) {
-                    tmp = std::move(cdr(tmp));
+                    tmp = cdr(tmp);
                 }
                 return car(tmp);
             }
@@ -327,8 +332,8 @@ namespace secd {
                 return data;
             }
 
-            void set(Value<Data> data) {
-                data = std::move(data);
+            void set(Value<Data> val) {
+                data = std::move(val);
             }
         private:
             Value<Data> data;
