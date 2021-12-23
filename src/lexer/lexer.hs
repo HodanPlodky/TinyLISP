@@ -9,6 +9,7 @@ data Keyword
     | FCons
     | Null
     | Define
+    | Lambda
     deriving Show
 
 checkIdent :: String -> Token
@@ -20,6 +21,7 @@ checkIdent name =
         "cons" -> TKw FCons
         "null" -> TKw Null
         "define" -> TKw Define
+        "lambda" -> TKw Lambda
         n -> TIdent n
 
 data Token

@@ -3,17 +3,26 @@ import System.Environment
 import Lexer
 import Parser
 import Ast
-import Vm
 
-getInst :: String -> Inst
-getInst = generate . parse . getTokens
+getInst :: String -> Maybe Inst
+getInst str = 
+    let parsed = (parse . getTokens) str in 
+    case parsed of
+        EError -> Nothing
+        p -> Just $ generate p [[]]
 
 compileAndSave :: String -> String -> IO()
-compileAndSave path = (save path) . getInst
+compileAndSave path str =
+    case getInst str of
+        Nothing -> putStrLn "Error"
+        Just inst -> do 
+            save path inst
+            putStrLn "Done"
 
 main :: IO()
 main = do
     args <- getArgs
     str <- readFile $ head args
-    --putStr . show $ (parse . getTokens) str
+    putStrLn . show $ (parseImp [] . getTokens) str
+    putStrLn . show $ getInst str
     compileAndSave (args !! 1) str

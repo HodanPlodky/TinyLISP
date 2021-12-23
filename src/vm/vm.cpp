@@ -109,6 +109,52 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                     (std::make_shared<inst::JOIN>(inst::JOIN())));
                 break;
             }
+            case 0x0d : {
+                if (stream.eof())
+                    throw std::runtime_error("After LD must be number");
+                auto x = readLong(stream);
+                if (stream.eof())
+                    throw std::runtime_error("After LD must be two number");
+                auto y = readLong(stream);
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::LD>(inst::LD(x, y))));
+                break;
+            }
+            case 0x0e : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::LDF>(inst::LDF())));
+                break;
+            }
+            case 0x0f : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::AP>(inst::AP())));
+                break;
+            }
+            case 0x10 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::RTN>(inst::RTN())));
+                break;
+            }
+            case 0x11 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::EQ>(inst::EQ())));
+                break;
+            }
+            case 0x12 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::GT>(inst::GT())));
+                break;
+            }
+            case 0x13 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::LT>(inst::LT())));
+                break;
+            }
+            case 0xfe : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::ERR>(inst::ERR())));
+                break;
+            }
             case -1 : {
                 return code;
             }
@@ -216,6 +262,15 @@ void run(
             //std::cout << "DIV" << std::endl;
             numbinaryop(datastack, [](int x, int y) {return y / x;}, "DIV");
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::EQ>>(instruction)) {
+            numbinaryop(datastack, [](int x, int y) {return y == x ? 1 : 0;}, "EQ");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::GT>>(instruction)) {
+            numbinaryop(datastack, [](int x, int y) {return y > x ? 1 : 0;}, "GT");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LT>>(instruction)) {
+            numbinaryop(datastack, [](int x, int y) {return y < x ? 1 : 0;}, "LT");
+        }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
             //std::cout << "JOIN" << std::endl;
             auto recovered = dump.recover();
@@ -253,6 +308,9 @@ void run(
                 return secd::cons(x, y);
             };
             binaryop(datastack, op, "CONS");
+        }
+        else {
+            throw std::runtime_error("Not implemented");
         }
     }
 }

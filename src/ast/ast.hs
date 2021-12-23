@@ -5,6 +5,7 @@ import qualified Data.ByteString.Lazy as BIN
 import Data.Binary.Put
 import Data.Binary
 import System.IO
+import Data.Map
 --import Debug.Trace
 --import Data.Bits.Extras
 
@@ -22,6 +23,7 @@ data BinOp
 
 data Expr
     = ENum Int
+    | EIdent String
     | ECons Expr Expr
     | ENull
     | EFunc
@@ -30,6 +32,8 @@ data Expr
             , thenB :: Expr
             , elseb :: Expr
             }
+    | ELambda [String] Expr --arguments and body
+    | ECall Expr [Expr] -- callable expression and arguments
     | EList [Expr]
     | EError
     deriving Show
@@ -40,12 +44,16 @@ appendExpr e1 e2 = EList [e1, e2]
 
 data Inst
     = InstList [Inst]
+    | ERR
     | LDC Int
     | NIL
     | ADD
     | SUB
     | MUL
     | DIV
+    | EQ
+    | GT
+    | LT
     | CONS
     | CAR
     | CDR
@@ -56,36 +64,63 @@ data Inst
     | LDF Inst
     | AP
     | RTN
-    deriving Show
+    deriving (Show, Eq, Ord)
 
 appendInst :: Inst -> Inst -> Inst
 appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
 
-generate :: Expr -> Inst
+prependInst :: Inst -> Inst -> Inst
+prependInst i (InstList l) = InstList (i : l)
+prependInst i1 i2 = InstList [i1, i2]
+
+generate :: Expr -> [[String]] -> Inst
 --generate e | trace ("generate " ++ show e) False = undefined
-generate (ENum n) = LDC n
-generate (EBinOp OAdd x y) = InstList [generate x, generate y, ADD]
-generate (EBinOp OSub x y) = InstList [generate x, generate y, SUB]
-generate (EBinOp OEq x y) = 
-    InstList [
-                InstList [generate x, generate y, SUB],
-                SEL,
-                InstList [LDC 0, JOIN],
-                InstList [LDC 1, JOIN]
-             ]
-generate (EBinOp OMul x y) = InstList [generate x, generate y, MUL]
-generate (EBinOp ODiv x y) = InstList [generate x, generate y, DIV]
-generate (EBinOp OCons x y) = InstList [generate y, generate x, CONS]
-generate (EIf cond thenB elseB) = 
-    InstList    [ generate cond, SEL
-                , appendInst (generate thenB) JOIN
-                , appendInst (generate elseB) JOIN
+generate (ENum n) _ = LDC n
+--watch me create undefined nvm i created error
+generate (EIdent s) names =
+    let lx = Prelude.filter (\i -> elem s (names !! i)) [0..] in
+    case lx of
+        [] -> ERR
+        x -> case Prelude.filter (\i -> s == (names !! head x) !! i) [0..] of
+            [] -> ERR
+            y -> LD (head x) (head y)
+    
+generate (EBinOp OAdd x y) names = 
+    InstList [generate x names , generate y names, ADD]
+generate (EBinOp OSub x y) names = 
+    InstList [generate x names, generate y names, SUB]
+generate (EBinOp OEq x y) names = 
+    InstList [generate x names, generate y names, Ast.EQ]
+generate (EBinOp OGt x y) names = 
+    InstList [generate x names, generate y names, Ast.GT]
+generate (EBinOp OLt x y) names =
+    InstList [generate x names, generate y names, Ast.LT]
+generate (EBinOp OMul x y) names = 
+    InstList [generate x names, generate y names, MUL]
+generate (EBinOp ODiv x y) names = 
+    InstList [generate x names, generate y names, DIV]
+generate (EBinOp OCons x y) names = 
+    InstList [generate y names, generate x names, CONS]
+generate (EIf cond thenB elseB) names = 
+    InstList    [ generate cond names, SEL
+                , appendInst (generate thenB names) JOIN
+                , appendInst (generate elseB names) JOIN
                 ]
-generate (EList exprs) = InstList $ map generate  exprs
-generate (ENull) = InstList [NIL]
-generate (EError) = NIL
-generate _ = NIL
+generate (EList exprs) names = 
+    InstList $ Prelude.map (\x ->generate x names)  exprs 
+generate (ENull) _ = InstList [NIL]
+generate (ELambda args body) names =
+    LDF $ appendInst (generate body (args : names)) RTN
+generate (ECall callable args) names =
+    appendInst
+        (appendInst
+            (InstList $ 
+                Prelude.foldr (\x acc -> acc ++ [generate x names, CONS]) [NIL] args) 
+            (generate callable names))
+        AP
+generate (EError) _ = ERR
+generate _ _ = NIL
 
 save :: String -> Inst -> IO ()
 save path (InstList insts) = do
@@ -98,6 +133,26 @@ save path inst = do
     hClose h_out
 
 -- TODO please refactor
+simpleSaves :: Map Inst Word64
+simpleSaves = fromList
+    [ (ADD, 0x01)
+    , (NIL, 0x03)
+    , (SUB, 0x04)
+    , (MUL, 0x05)
+    , (DIV, 0x06)
+    , (CONS, 0x07)
+    , (CAR, 0x08)
+    , (CDR, 0x09)
+    , (CONSP, 0x0a)
+    , (SEL, 0x0b)
+    , (JOIN, 0x0c)
+    , (AP, 0x0f)
+    , (RTN, 0x10)
+    , (Ast.EQ, 0x11)
+    , (Ast.GT, 0x12)
+    , (Ast.LT, 0x13)
+    , (ERR, 0xfe)
+    ]
 
 saveImpl :: [Inst] -> Handle -> IO ()
 saveImpl (InstList insts : rest) outfile = do
@@ -106,54 +161,11 @@ saveImpl (InstList insts : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0xff)
     saveImpl rest outfile
 
-saveImpl (ADD : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x01)
-    saveImpl rest outfile
-
 saveImpl (LDC num : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0x02)
     BIN.hPut outfile $ runPut (put num)
     saveImpl rest outfile
 
-saveImpl (NIL : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x03)
-    saveImpl rest outfile
-
-saveImpl (SUB : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x04)
-    saveImpl rest outfile
-
-saveImpl (MUL : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x05)
-    saveImpl rest outfile
-
-saveImpl (DIV : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x06)
-    saveImpl rest outfile
-
-saveImpl (CONS : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x07)
-    saveImpl rest outfile
-
-saveImpl (CAR : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x08)
-    saveImpl rest outfile
-
-saveImpl (CDR : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x09)
-    saveImpl rest outfile
-
-saveImpl (CONSP : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x0a)
-    saveImpl rest outfile
-
-saveImpl (SEL : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x0b)
-    saveImpl rest outfile
-
-saveImpl (JOIN : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x0c)
-    saveImpl rest outfile
 
 saveImpl (LD x y : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0x0d)
@@ -171,12 +183,13 @@ saveImpl (LDF insts : rest) outfile = do
     saveImpl ([InstList [insts]]) outfile
     saveImpl rest outfile
 
-saveImpl (AP : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x0f)
-    saveImpl rest outfile
-
-saveImpl (RTN : rest) outfile = do
-    BIN.hPut outfile $ runPut (putWord64be 0x10)
+saveImpl (x : rest) outfile = 
+    let word = case Data.Map.lookup x simpleSaves of
+            Just w -> w
+            Nothing -> 0xff
+    in
+    do
+    BIN.hPut outfile $ runPut (putWord64be word)
     saveImpl rest outfile
 
 saveImpl [] _ = return () 

@@ -5,12 +5,16 @@
 #include <sstream>
 
 namespace inst {
+    struct ERR{};
     struct LDC;
     struct NIL{};
     struct ADD{};
     struct SUB{};
     struct MUL{};
     struct DIV{};
+    struct EQ{};
+    struct GT{};
+    struct LT{};
     struct CONS{};
     struct CAR{};
     struct CDR{};
@@ -18,17 +22,21 @@ namespace inst {
     struct SEL{};
     struct JOIN{};
     struct LD;
-    struct LDF;
+    struct LDF{};
     struct AP{};
     struct RTN{};
 
     using Inst = std::variant<
+        std::shared_ptr<ERR>,
         std::shared_ptr<LDC>,
         std::shared_ptr<NIL>,
         std::shared_ptr<ADD>,
         std::shared_ptr<SUB>,
         std::shared_ptr<MUL>,
         std::shared_ptr<DIV>,
+        std::shared_ptr<EQ>,
+        std::shared_ptr<GT>,
+        std::shared_ptr<LT>,
         std::shared_ptr<CONS>,
         std::shared_ptr<CAR>,
         std::shared_ptr<CDR>,
@@ -50,10 +58,12 @@ namespace inst {
         int i, j;
     };
 
+    /*
     struct LDF {
         LDF(Inst inner) : inner(inner) {}
         Inst inner;
     };
+    */
 
     void show(Inst instruction) {
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
@@ -83,6 +93,22 @@ namespace inst {
         }
         else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
             std::cout << "CONS";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LD>>(instruction)) {
+            auto tmp = std::get<std::shared_ptr<LD>>(instruction);
+            std::cout << "LD " << tmp->i << "," << tmp->j;
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LDF>>(instruction)) {
+            std::cout << "LDF";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::AP>>(instruction)) {
+            std::cout << "AP";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
+            std::cout << "RTN";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::ERR>>(instruction)) {
+            std::cout << "ERR";
         }
         else {
             std::cout << "mate too fast";
