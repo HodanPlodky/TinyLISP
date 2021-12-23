@@ -16,10 +16,18 @@
     (cons 5 (cons 10 null)) 
     (+ 2 3))
 
-(if (eq? 50 50) 
-    (cons 5 (cons 10 null)) 
-    (+ 2 3))
-
+(cons ( cons 123 null)
+    (if (eq? 50 50) 
+        (cons 5 (cons 10 null)) 
+        null))
+(cons 123
+    (if (eq? 50 50) 
+        (cons 5 (cons 10 null)) 
+        null))
+(cons 123
+    (if (eq? 40 50) 
+        (cons 5 (cons 10 null)) 
+        (cons (cons 1 (cons 2 null)) (cons 3 null))))
 (+ 0 1)
 
 (+ 2 4)

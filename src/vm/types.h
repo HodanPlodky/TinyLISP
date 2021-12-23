@@ -183,13 +183,11 @@ namespace secd {
             auto tmpcar = car(val);
             auto tmpcdr = cdr(val);
             if (
-                std::holds_alternative<std::shared_ptr<T>>(tmpcar) &&
-                (
-                    std::holds_alternative<std::shared_ptr<ConsCell<T>>>(tmpcdr) ||
-                    std::holds_alternative<std::shared_ptr<NilT>>(tmpcdr)
-                )
+                std::holds_alternative<std::shared_ptr<ConsCell<T>>>(tmpcdr) ||
+                std::holds_alternative<std::shared_ptr<NilT>>(tmpcdr)
+                
             ) {
-                showValueInner(tmpcar);
+                showValue(tmpcar);
                 std::cout << " ";
                 showValueInner(tmpcdr);
             }
