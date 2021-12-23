@@ -161,12 +161,46 @@ namespace secd {
         }
         else {
             std::cout << "( ";
+            showValueInner(val);
+            std::cout << ")";
+            /*
             showValue(car(val));
             std::cout << " ";
             showValue(cdr(val));
-            std::cout << " )";
+            */
         }
+    }
 
+    template <typename T>
+    void showValueInner(Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<T>>(val)) {
+            auto tmp = *std::get<std::shared_ptr<T>>(val);
+            std::cout << tmp;
+        }
+        else if (std::holds_alternative<std::shared_ptr<secd::NilT>>(val)) {
+        }
+        else {
+            auto tmpcar = car(val);
+            auto tmpcdr = cdr(val);
+            if (
+                std::holds_alternative<std::shared_ptr<T>>(tmpcar) &&
+                (
+                    std::holds_alternative<std::shared_ptr<ConsCell<T>>>(tmpcdr) ||
+                    std::holds_alternative<std::shared_ptr<NilT>>(tmpcdr)
+                )
+            ) {
+                showValueInner(tmpcar);
+                std::cout << " ";
+                showValueInner(tmpcdr);
+            }
+            else {
+                std::cout << "( ";
+                showValue(tmpcar);
+                std::cout << " ";
+                showValue(tmpcdr);
+                std::cout << " )";
+            }
+        }
     }
 
     template <typename T>
@@ -223,7 +257,8 @@ namespace secd {
             Code(Value<inst::Inst> data) : data(data) {}
 
             void prepend(Value<inst::Inst> val) {
-                data = std::move(cons(val, data));
+                if (!std::holds_alternative<std::shared_ptr<NilT>>(val))
+                    data = std::move(cons(val, data));
             }
 
             void add(Value<inst::Inst> val) {

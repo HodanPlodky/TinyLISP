@@ -210,11 +210,11 @@ void run(
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
             //std::cout << "MUL" << std::endl;
-            numbinaryop(datastack, [](int x, int y) {return y * x;}, "SUB");
+            numbinaryop(datastack, [](int x, int y) {return y * x;}, "MUL");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
             //std::cout << "DIV" << std::endl;
-            numbinaryop(datastack, [](int x, int y) {return y / x;}, "SUB");
+            numbinaryop(datastack, [](int x, int y) {return y / x;}, "DIV");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
             //std::cout << "JOIN" << std::endl;

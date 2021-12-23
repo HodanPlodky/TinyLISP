@@ -5,6 +5,7 @@ import qualified Data.ByteString.Lazy as BIN
 import Data.Binary.Put
 import Data.Binary
 import System.IO
+--import Debug.Trace
 --import Data.Bits.Extras
 
 
@@ -62,6 +63,7 @@ appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
 
 generate :: Expr -> Inst
+--generate e | trace ("generate " ++ show e) False = undefined
 generate (ENum n) = LDC n
 generate (EBinOp OAdd x y) = InstList [generate x, generate y, ADD]
 generate (EBinOp OSub x y) = InstList [generate x, generate y, SUB]
@@ -177,4 +179,4 @@ saveImpl (RTN : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0x10)
     saveImpl rest outfile
 
-saveImpl [] _ = putStrLn "Finnish" 
+saveImpl [] _ = return () 

@@ -14,12 +14,12 @@ parseImp :: [Expr] -> [Token] -> (Expr, [Token])
 parseImp acc [] = (EList acc, [])
 parseImp acc [TEof] = (EList acc, [])
 parseImp acc t = 
-    let (e, toks) = expression t
-    in
-    parseImp (acc ++ [e]) toks
+    let (e, toks) = expression t in
+    case e of
+        EError -> (EError, toks)
+        _ -> parseImp (acc ++ [e]) toks
 
 expression :: [Token] -> (Expr, [Token])
-expression (TNumber n : rest) = (ENum n, rest)
 expression (TLBrac:TAdd:rest) = expressionBin rest OAdd
 expression (TLBrac:TSub:rest) = expressionBin rest OSub
 expression (TLBrac:TMul:rest) = expressionBin rest OMul
@@ -29,10 +29,11 @@ expression (TLBrac:TGt:rest) = expressionBin rest OGt
 expression (TLBrac:TKw FCons:rest) = expressionBin rest OCons
 expression (TLBrac:TKw Eq:rest) = expressionBin rest OEq
 expression (TLBrac:TKw Null:rest) = (ENull, rest) 
+expression (TKw Null : rest) = (ENull, rest)
 expression (TLBrac:TKw If:rest) =
-    let (cond, t1) = expression rest
-        (thenB, t2) = expression t1
-        (elseB, toks) = expression t2
+    let (cond, t1) = factor rest
+        (thenB, t2) = factor t1
+        (elseB, toks) = factor t2
     in
     case toks of
         (TRBrac:rest) -> (EIf cond thenB elseB, rest)
@@ -42,9 +43,14 @@ expression [] = (EError, [])
 
 expressionBin :: [Token] -> BinOp -> (Expr, [Token])
 expressionBin t op = 
-    let (l, toksl) = expression t
-        (r, toks) = expression toksl
+    let (l, toksl) = factor t
+        (r, toks) = factor toksl
     in
     case toks of
       (TRBrac:rest) -> (EBinOp op l r, rest)
-      _ -> (EError, [])
+      _ -> (EError, toks)
+
+factor :: [Token] -> (Expr, [Token])
+factor (TNumber n : rest) = (ENum n, rest)
+factor (TLBrac:rest) = expression (TLBrac : rest)
+factor (_ : rest) = (EError, rest)
