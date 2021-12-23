@@ -24,6 +24,8 @@
 
 #include "types.h"
 
+using secd::Data;
+
 long readLong(std::ifstream & stream) {
     char buffer[8];
     stream.read(buffer, 8);
@@ -43,7 +45,7 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
         switch (out) {
             case 0x00 : {
                 auto codeinner = readInst(stream);
-                code->add(std::move(codeinner->getData()));
+                code->addData(std::move(codeinner->getData()));
                 break;
             }
             case 0x01 : {
@@ -163,18 +165,20 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
     return code;
 } 
 
-void writeValue(secd::Value<int> val) {
-    if (std::holds_alternative<std::shared_ptr<int>>(val)) {
-        std::cout << *std::get<std::shared_ptr<int>>(val) << std::endl;
+/*
+void writeValue(secd::Value<Data> val) {
+    if (std::holds_alternative<std::shared_ptr<Data>>(val)) {
+        std::cout << *std::get<std::shared_ptr<Data>>(val) << std::endl;
     }
     else {
         throw std::runtime_error("Not implemented");
     }
 }
+*/
 
 void binaryop(
-    secd::Stack<int> & datastack, 
-    std::function<secd::Value<int>(secd::Value<int>, secd::Value<int>)> op, 
+    secd::Stack<Data> & datastack, 
+    std::function<secd::Value<Data>(secd::Value<Data>, secd::Value<Data>)> op, 
     std::string name
 ) {
     if (datastack.empty())
@@ -189,18 +193,29 @@ void binaryop(
 }
 
 void numbinaryop(
-    secd::Stack<int> & datastack, 
+    secd::Stack<Data> & datastack, 
     std::function<int(int, int)> op, 
     std::string name
 ) {
-    auto numop = [name, op](secd::Value<int> x, secd::Value<int> y) -> secd::Value<int>{
+    auto numop = [name, op](secd::Value<Data> x, secd::Value<Data> y) -> secd::Value<Data>{
         if (
-            std::holds_alternative<std::shared_ptr<int>>(x) &&
-            std::holds_alternative<std::shared_ptr<int>>(y)
+            std::holds_alternative<std::shared_ptr<Data>>(x) &&
+            std::holds_alternative<std::shared_ptr<Data>>(y)
         ) {
-            int nx = *std::get<std::shared_ptr<int>>(x);
-            int ny = *std::get<std::shared_ptr<int>>(y);
-            return std::make_shared<int>(op(nx, ny));
+            auto dx = *std::get<std::shared_ptr<Data>>(x);
+            auto dy = *std::get<std::shared_ptr<Data>>(y);
+            if (
+                std::holds_alternative<int>(dx) &&
+                std::holds_alternative<int>(dy)
+            ) {
+                int nx = std::get<int>(dx);
+                int ny = std::get<int>(dy);
+                return std::make_shared<Data>(op(nx, ny));
+            }
+            else { 
+                throw std::runtime_error(
+                    name + std::string(" requires two numbers, got different type"));
+            }
         }
         else {
             throw std::runtime_error(
@@ -211,10 +226,10 @@ void numbinaryop(
     binaryop(datastack, numop, name);
 }
 
-void traverse_stack(secd::Stack<int> & st) {
+void traverse_stack(secd::Stack<Data> & st) {
     if(st.empty())
         return;
-    secd::Value<int> x = st.top();
+    secd::Value<Data> x = st.top();
     st.pop();
     traverse_stack(st);
     secd::showValue(x);
@@ -225,14 +240,15 @@ void traverse_stack(secd::Stack<int> & st) {
 
 void run(
     std::shared_ptr<secd::Code> code,
-    secd::Stack<int> & datastack,
+    secd::Stack<Data> & datastack,
     secd::Dump & dump,
+    secd::Enviroment & env,
     bool verbose
 ) {
     while(!code->empty()) {
         if (verbose) {
             traverse_stack(datastack);
-            secd::showInsts(code->getData());
+            secd::showValue(code->getData());
             std::cout << std::endl;
         }
         if (code->isHeadList()) {
@@ -244,7 +260,7 @@ void run(
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
             //std::cout << "LCD" << std::endl;
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
-            datastack.push(std::make_shared<int>(ldc->number));
+            datastack.push(std::make_shared<Data>(ldc->number));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
             //std::cout << "ADD" << std::endl;
@@ -282,9 +298,12 @@ void run(
                 throw std::runtime_error("SEL needs one argument on stack");
             auto tmp = datastack.top();
             datastack.pop();
-            if (!std::holds_alternative<std::shared_ptr<int>>(tmp))
+            if (!std::holds_alternative<std::shared_ptr<Data>>(tmp))
                 throw std::runtime_error("SEL needs one number on stack, found different type");
-            int number = *std::get<std::shared_ptr<int>>(tmp);
+            auto datatmp = *std::get<std::shared_ptr<Data>>(tmp);
+            if (!std::holds_alternative<int>(datatmp))
+                throw std::runtime_error("SEL needs one number on stack, found different type");
+            int number = std::get<int>(datatmp);
             if (number != 0) {
                 auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
                 code->next();
@@ -304,10 +323,30 @@ void run(
             datastack.push(secd::Nil);
         }
         else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
-            auto op = [](secd::Value<int> x, secd::Value<int> y) -> secd::Value<int> {
+            auto op = [](secd::Value<Data> x, secd::Value<Data> y) -> secd::Value<Data> {
                 return secd::cons(x, y);
             };
             binaryop(datastack, op, "CONS");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LD>>(instruction)) {
+            auto ld = std::get<std::shared_ptr<inst::LD>>(instruction);
+            datastack.push(env.get(ld->i, ld->j));
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LDF>>(instruction)) {
+            auto tmpenv = env.get();
+            secd::Value<Data> tmpnext = code->next();
+            auto tmpcons = secd::cons(tmpnext, tmpenv);
+            datastack.push(tmpcons); 
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::AP>>(instruction)) {
+            auto closure = datastack.top();
+            datastack.pop();
+            auto args = datastack.top();
+            datastack.pop();
+            auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
+            dump.dump(dumpdata);
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
         }
         else {
             throw std::runtime_error("Not implemented");
@@ -324,9 +363,10 @@ int main(int argc, char ** argv) {
         verbose = std::string(argv[2]) == "-v";
     }
     try {
-        auto datastack = secd::Stack<int>();
+        auto datastack = secd::Stack<secd::Data>();
         auto dump = secd::Dump();
-        run(code, datastack, dump, verbose);
+        auto env = secd::Enviroment();
+        run(code, datastack, dump, env, verbose);
 
         traverse_stack(datastack);
     }

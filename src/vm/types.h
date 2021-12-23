@@ -65,53 +65,53 @@ namespace inst {
     };
     */
 
-    void show(Inst instruction) {
+    void show(Inst instruction, std::ostream & stream) {
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
             auto tmp = std::get<std::shared_ptr<LDC>>(instruction);
-            std::cout << "LCD" << tmp->number;
+            stream << "LCD" << tmp->number;
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
-            std::cout << "ADD";
+            stream << "ADD";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
-            std::cout << "SUB";
+            stream << "SUB";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
-            std::cout << "MUL";
+            stream << "MUL";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
-            std::cout << "DIV";
+            stream << "DIV";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
-            std::cout << "JOIN";
+            stream << "JOIN";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
-            std::cout << "SEL";
+            stream << "SEL";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::NIL>>(instruction)) {
-            std::cout << "NIL";
+            stream << "NIL";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
-            std::cout << "CONS";
+            stream << "CONS";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::LD>>(instruction)) {
             auto tmp = std::get<std::shared_ptr<LD>>(instruction);
-            std::cout << "LD " << tmp->i << "," << tmp->j;
+            stream << "LD " << tmp->i << "," << tmp->j;
         }
         else if (std::holds_alternative<std::shared_ptr<inst::LDF>>(instruction)) {
-            std::cout << "LDF";
+            stream << "LDF";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::AP>>(instruction)) {
-            std::cout << "AP";
+            stream << "AP";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
-            std::cout << "RTN";
+            stream << "RTN";
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ERR>>(instruction)) {
-            std::cout << "ERR";
+            stream << "ERR";
         }
         else {
-            std::cout << "mate too fast";
+            stream << "mate too fast";
         }
 
     }
@@ -165,7 +165,7 @@ namespace secd {
         }
         else if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
             auto tmp = std::get<std::shared_ptr<inst::Inst>>(val);
-            inst::show(*tmp);
+            inst::show(*tmp, std::cout);
         }
         else if (std::holds_alternative<std::shared_ptr<ConsCell<inst::Inst>>>(val)) {
             std::cout << "( ";
@@ -189,11 +189,6 @@ namespace secd {
             std::cout << "( ";
             showValueInner(val);
             std::cout << ")";
-            /*
-            showValue(car(val));
-            std::cout << " ";
-            showValue(cdr(val));
-            */
         }
     }
 
@@ -267,42 +262,117 @@ namespace secd {
         return std::move(Nil);
     }
 
+    using Data = std::variant<
+            int,
+            inst::Inst
+        >;
+    std::ostream & operator<<(std::ostream & stream, const Data & val) {
+        if (std::holds_alternative<int>(val)) {
+            stream << std::get<int>(val);
+        }
+        else {
+            inst::show(std::get<inst::Inst>(val), stream);
+        }
+        return stream;
+    }
+
     // four parts of secd
+    //template <typename T>
+    //using Stack = std::stack<Value<T>>;
     template <typename T>
-    using Stack = std::stack<Value<T>>;
+    class Stack {
+        public:
+            Stack() : data(std::move(Nil)) {}
+
+            void pop() {
+                data = cdr(data);
+            }
+
+            Value<T> top() {
+                return car(data);
+            }
+
+            void push(Value<T> val) {
+                data = cons(val, data);
+            }
+
+            Value<T> getData() {
+                return data;
+            }
+
+            bool empty() {
+                return std::holds_alternative<std::shared_ptr<NilT>>(data);
+            }
+        private:
+            Value<T> data;
+    };
 
     class Enviroment {
+        public:
+            Enviroment() : data(std::move(Nil)) {}
 
+            Value<Data> get(int x, int y) {
+                auto tmp = std::move(data);
+                for (int i = 0; i < x; i++) {
+                    tmp = std::move(cdr(tmp));
+                }
+                tmp = std::move(car(tmp));
+                for (int i = 0; i < y; i++) {
+                    tmp = std::move(cdr(tmp));
+                }
+                return car(tmp);
+            }
+
+            Value<Data> get() {
+                return data;
+            }
+
+            void set(Value<Data> data) {
+                data = std::move(data);
+            }
+        private:
+            Value<Data> data;
     };
 
     class Code {
         public:
             Code() : data(std::move(Nil)) {}
-            Code(Value<inst::Inst> data) : data(data) {}
+            Code(Value<Data> data) : data(data) {}
 
-            void prepend(Value<inst::Inst> val) {
+            void prepend(Value<Data> val) {
                 if (!std::holds_alternative<std::shared_ptr<NilT>>(val))
                     data = std::move(cons(val, data));
             }
 
             void add(Value<inst::Inst> val) {
+                if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
+                    Data d = *std::get<std::shared_ptr<inst::Inst>>(val);
+                    Value<Data> tmp = std::make_shared<Data>(d);
+                    data = std::move(append(data, tmp));
+                }
+                else {
+                    throw std::runtime_error("Can only add instruction to code");
+                }
+            }
+
+            void addData(Value<Data> val) {
                 data = std::move(append(data, val));
             }
 
             bool isHeadList() {
                 return 
-                    std::holds_alternative<std::shared_ptr<ConsCell<inst::Inst>>>
+                    std::holds_alternative<std::shared_ptr<ConsCell<Data>>>
                     (car(data));
             }
 
-            Value<inst::Inst> head() {
+            Value<Data> head() {
                 if(empty()) {
                     return Nil;
                 }
                 return car(data);
             }
 
-            Value<inst::Inst> next() {
+            Value<Data> next() {
                 if(empty()) {
                     return Nil;
                 }
@@ -313,31 +383,44 @@ namespace secd {
 
             inst::Inst headInst() {
                 auto res = std::move(car(data));
-                if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
+                data = std::move(cdr(data));
+                if (!std::holds_alternative<std::shared_ptr<Data>>(res))
+                    throw std::runtime_error("car in not instruction");
+                auto tmp = *std::get<std::shared_ptr<Data>>(res);
+                if (!std::holds_alternative<inst::Inst>(tmp))
                     throw std::runtime_error("car in not instruction");
 
-                return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
+                return std::get<inst::Inst>(tmp);
             }
 
             inst::Inst nextInst() {
                 // in case branching creates only instruction
-                if (std::holds_alternative<std::shared_ptr<inst::Inst>>(data)) {
-                    auto tmp = std::get<std::shared_ptr<inst::Inst>>(data);
-                    data = std::move(Nil);
-                    return *tmp;
+                if (std::holds_alternative<std::shared_ptr<Data>>(data)) {
+                    auto tmp = *std::get<std::shared_ptr<Data>>(data);
+                    if (std::holds_alternative<inst::Inst>(tmp)) {   
+                        auto resinst = std::get<inst::Inst>(tmp);
+                        data = std::move(Nil);
+                        return resinst;
+                    }
+                    else {
+                        throw std::runtime_error("code does not contain instruction");
+                    }
                 }
                 if (empty()) {
                     throw std::runtime_error("??????");
                 }
                 auto res = std::move(car(data));
                 data = std::move(cdr(data));
-                if (!std::holds_alternative<std::shared_ptr<inst::Inst>>(res))
+                if (!std::holds_alternative<std::shared_ptr<Data>>(res))
+                    throw std::runtime_error("car in not instruction");
+                auto tmp = *std::get<std::shared_ptr<Data>>(res);
+                if (!std::holds_alternative<inst::Inst>(tmp))
                     throw std::runtime_error("car in not instruction");
 
-                return std::move(*std::get<std::shared_ptr<inst::Inst>>(res));
+                return std::get<inst::Inst>(tmp);
             }
 
-            Value<inst::Inst> getData() {
+            Value<Data> getData() {
                 return data;
             }
 
@@ -346,18 +429,18 @@ namespace secd {
                     return true;
                 return false;
             }
-            Value<inst::Inst> data;
+            Value<Data> data;
     };
 
     class Dump {
         public:
-            Dump() : data(Stack<inst::Inst>()) {}
+            Dump() : data(Stack<Data>()) {}
 
-            void dump(Value<inst::Inst> val) {
+            void dump(Value<Data> val) {
                 data.push(val);
             }
 
-            Value<inst::Inst> recover() {
+            Value<Data> recover() {
                 if (data.empty())
                     throw std::runtime_error("Cannot recover dump is empty");
                 auto tmp = std::move(data.top());
@@ -365,6 +448,6 @@ namespace secd {
                 return tmp;
             }
         private:
-            Stack<inst::Inst> data;
+            Stack<Data> data;
     };
 }
