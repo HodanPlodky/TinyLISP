@@ -45,7 +45,7 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
         switch (out) {
             case 0x00 : {
                 auto codeinner = readInst(stream);
-                code->addData(std::move(codeinner->getData()));
+                code->addData(codeinner->getData());
                 break;
             }
             case 0x01 : {
@@ -269,7 +269,7 @@ void run(
             std::cin.get();
         }
         if (code->isHeadList()) {
-            auto list = std::move(code->next());
+            auto list = code->next();
             code = std::make_shared<secd::Code>(secd::Code(secd::appendLists(list, code->getData())));
             continue;
         }
@@ -325,15 +325,15 @@ void run(
                 auto ncode = std::make_shared<secd::Code>(secd::Code(code->next()));
                 code->next();
                 dump.dump(code->getData());
-                code = std::move(ncode);
+                code = ncode;
             }
             else {
                 code->next();
-                auto nexttmp = std::move(code->next());
+                auto nexttmp = code->next();
                 auto ncode = std::make_shared<secd::Code>(secd::Code(nexttmp));
-                auto tmpdump = std::move(code->getData());
+                auto tmpdump = code->getData();
                 dump.dump(tmpdump);
-                code = std::move(ncode);
+                code = ncode;
             }
         }
         else if (std::holds_alternative<std::shared_ptr<inst::NIL>>(instruction)) {

@@ -165,7 +165,7 @@ namespace secd {
         if (!std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val)) {
             std::runtime_error("car error (value is not a cons cell)");
         }
-        auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
+        auto conscell = std::get<std::shared_ptr<ConsCell<T>>>(val);
         return *(conscell->car);
     }
     
@@ -174,7 +174,7 @@ namespace secd {
         if (!std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val)) {
             std::runtime_error("cdr error (value is not a cons cell)");
         }
-        auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
+        auto conscell = std::get<std::shared_ptr<ConsCell<T>>>(val);
         return *(conscell->cdr);
     }
 
@@ -254,20 +254,20 @@ namespace secd {
         auto cell = std::make_shared<ConsCell<T>>(ConsCell<T>());
         cell->car = std::make_shared<Value<T>>(car);
         cell->cdr = std::make_shared<Value<T>>(cdr);
-        return std::move(cell);
+        return cell;
     }
 
     template <typename T>
     Value<T> append(Value<T> cell, Value<T> val) {
         if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
-            return cons<T>(std::move(val), std::move(Nil));
+            return cons<T>(val, Nil);
         }
         if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            Value<T> tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
-            return cons(std::move(car(tmp)), std::move(append(cdr(tmp), val)));
+            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
+            return cons(car(tmp), append(cdr(tmp), val));
         }
         std::runtime_error("cannot append");
-        return std::move(Nil);
+        return Nil;
     }
 
     template <typename T>
@@ -279,14 +279,14 @@ namespace secd {
             ) {
                 return val;
             }
-            return cons<T>(std::move(val), std::move(Nil));
+            return cons<T>(val, Nil);
         }
         if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            Value<T> tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
-            return cons(std::move(car(tmp)), std::move(appendLists(cdr(tmp), val)));
+            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
+            return cons(car(tmp), appendLists(cdr(tmp), val));
         }
         std::runtime_error("cannot append");
-        return std::move(Nil);
+        return Nil;
     }
 
     using Data = std::variant<
@@ -309,7 +309,7 @@ namespace secd {
     template <typename T>
     class Stack {
         public:
-            Stack() : data(std::move(Nil)) {}
+            Stack() : data(Nil) {}
 
             void pop() {
                 data = cdr(data);
@@ -332,7 +332,7 @@ namespace secd {
             }
 
             void set(Value<T> val) {
-                data = std::move(val);
+                data = val;
             }
 
         private:
@@ -341,7 +341,7 @@ namespace secd {
 
     class Enviroment {
         public:
-            Enviroment() : data(std::move(Nil)) {}
+            Enviroment() : data(Nil) {}
 
             Value<Data> get(int x, int y) {
                 auto tmp = data;
@@ -360,7 +360,7 @@ namespace secd {
             }
 
             void set(Value<Data> val) {
-                data = std::move(val);
+                data = val;
             }
         private:
             Value<Data> data;
@@ -368,19 +368,19 @@ namespace secd {
 
     class Code {
         public:
-            Code() : data(std::move(Nil)) {}
+            Code() : data(Nil) {}
             Code(Value<Data> data) : data(data) {}
 
             void prepend(Value<Data> val) {
                 if (!std::holds_alternative<std::shared_ptr<NilT>>(val))
-                    data = std::move(cons(val, data));
+                    data = cons(val, data);
             }
 
             void add(Value<inst::Inst> val) {
                 if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
                     Data d = *std::get<std::shared_ptr<inst::Inst>>(val);
                     Value<Data> tmp = std::make_shared<Data>(d);
-                    data = std::move(append(data, tmp));
+                    data = append(data, tmp);
                 }
                 else {
                     throw std::runtime_error("Can only add instruction to code");
@@ -388,13 +388,14 @@ namespace secd {
             }
 
             void addData(Value<Data> val) {
-                data = std::move(append(data, val));
+                data = append(data, val);
             }
 
             bool isHeadList() {
                 return 
                     std::holds_alternative<std::shared_ptr<ConsCell<Data>>>
-                    (car(data));
+                    (car(data)) ||
+                    std::holds_alternative<std::shared_ptr<NilT>>(car(data));
             }
 
             Value<Data> head() {
@@ -408,14 +409,14 @@ namespace secd {
                 if(empty()) {
                     return Nil;
                 }
-                auto res = std::move(car(data));
-                data = std::move(cdr(data));
+                auto res = car(data);
+                data = cdr(data);
                 return res;
             }
 
             inst::Inst headInst() {
-                auto res = std::move(car(data));
-                data = std::move(cdr(data));
+                auto res = car(data);
+                data = cdr(data);
                 if (!std::holds_alternative<std::shared_ptr<Data>>(res))
                     throw std::runtime_error("car in not instruction");
                 auto tmp = *std::get<std::shared_ptr<Data>>(res);
@@ -431,7 +432,7 @@ namespace secd {
                     auto tmp = *std::get<std::shared_ptr<Data>>(data);
                     if (std::holds_alternative<inst::Inst>(tmp)) {   
                         auto resinst = std::get<inst::Inst>(tmp);
-                        data = std::move(Nil);
+                        data = Nil;
                         return resinst;
                     }
                     else {
@@ -441,8 +442,8 @@ namespace secd {
                 if (empty()) {
                     throw std::runtime_error("??????");
                 }
-                auto res = std::move(car(data));
-                data = std::move(cdr(data));
+                auto res = car(data);
+                data = cdr(data);
                 if (!std::holds_alternative<std::shared_ptr<Data>>(res))
                     throw std::runtime_error("car in not instruction");
                 auto tmp = *std::get<std::shared_ptr<Data>>(res);
@@ -475,7 +476,7 @@ namespace secd {
             Value<Data> recover() {
                 if (data.empty())
                     throw std::runtime_error("Cannot recover dump is empty");
-                auto tmp = std::move(data.top());
+                auto tmp = data.top();
                 data.pop();
                 return tmp;
             }
