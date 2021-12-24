@@ -247,10 +247,16 @@ void run(
 ) {
     while(!code->empty()) {
         if (verbose) {
+            system("clear");
             traverse_stack(datastack);
+            std::cout << "env : ";
+            secd::showValue(env.get());
             std::cout << std::endl;
+            std::cout << "code : ";
             secd::showValue(code->getData());
             std::cout << std::endl;
+            std::cout << std::endl;
+            std::cin.get();
         }
         if (code->isHeadList()) {
             auto list = std::move(code->next());
@@ -359,7 +365,9 @@ void run(
             if (std::holds_alternative<std::shared_ptr<secd::NilT>>(tmp))
                 env.set(secd::Nil);
             else
-                env.set(secd::car(secd::cdr(secd::cdr(recovered))));
+                env.set(secd::cons<Data>(
+                    secd::car(secd::cdr(secd::cdr(recovered))),
+                    secd::Nil));
         }
         else {
             throw std::runtime_error("Not implemented");

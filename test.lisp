@@ -32,6 +32,20 @@
 
 ( + 1 ((lambda (x y) (+ x y)) 10 20))
 (* 2 ((lambda (x y) (if (> x y) x y)) 20 32))
+((lambda (l e) (cons e l)) (cons 2 null) 3)
+
+((lambda (pow x) 
+    (if (eq? (pow x) 100) 
+        (pow (pow (pow (/ x 2))))
+        (pow (pow (pow x)))
+    )
+)(lambda (x) (* x x)) 10)
+(
+    ((lambda (a b) 
+        (lambda (f) 
+            (f (- a b)))
+    ) 20 30) (lambda (x) (* x 2))
+)
 
 (+ 2 4)
 null

@@ -82,6 +82,15 @@ namespace inst {
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
             stream << "DIV";
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::EQ>>(instruction)) {
+            stream << "EQ";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::GT>>(instruction)) {
+            stream << "GT";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::LT>>(instruction)) {
+            stream << "LT";
+        }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
             stream << "JOIN";
         }
