@@ -247,6 +247,29 @@ void traverse_stack(secd::Stack<Data> & st) {
     st.push(x);
 } 
 
+void verboseWriteout(
+    std::shared_ptr<secd::Code> code,
+    secd::Stack<Data> & datastack,
+    secd::Dump & dump,
+    secd::Enviroment & env
+) {
+            system("clear");
+            std::cout << "stack :" << std::endl;
+            traverse_stack(datastack);
+            std::cout << std::endl;
+            std::cout << "dump : " << std::endl;
+            traverse_stack(dump.getData());
+            std::cout << std::endl;
+            std::cout << "env : ";
+            secd::showValue(env.get());
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "code : ";
+            secd::showValue(code->getData());
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cin.get();
+}
 
 void run(
     std::shared_ptr<secd::Code> code,
@@ -257,16 +280,7 @@ void run(
 ) {
     while(!code->empty()) {
         if (verbose) {
-            system("clear");
-            traverse_stack(datastack);
-            std::cout << "env : ";
-            secd::showValue(env.get());
-            std::cout << std::endl;
-            std::cout << "code : ";
-            secd::showValue(code->getData());
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cin.get();
+            verboseWriteout(code, datastack, dump, env);
         }
         if (code->isHeadList()) {
             auto list = code->next();
@@ -375,9 +389,8 @@ void run(
             if (std::holds_alternative<std::shared_ptr<secd::NilT>>(tmp))
                 env.set(secd::Nil);
             else
-                env.set(secd::cons<Data>(
-                    secd::car(secd::cdr(secd::cdr(recovered))),
-                    secd::Nil));
+                env.set(
+                    secd::cdr(secd::cdr(recovered)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
             env.set(secd::cons<Data>(secd::cons<Data>(secd::Nil, secd::Nil), env.get()));
@@ -396,15 +409,17 @@ void run(
             }
             auto dummyenv = std::get<std::shared_ptr<secd::ConsCell<Data>>>(tmp);
             *dummyenv->car = secd::cons<Data>(secd::car(secd::car(args)), secd::cons<Data>(dummyenv, secd::Nil));
-            auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
+            auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), cdr(env.get())));
             dump.dump(dumpdata);
             code = std::make_shared<secd::Code>(car(closure));
-            env.set(secd::cons<Data>(tmp, secd::Nil));
+            env.set(secd::cons<Data>(tmp, cdr(closure)));
         }
         else {
             throw std::runtime_error("Not implemented");
         }
     }
+    if (verbose)
+        verboseWriteout(code, datastack, dump, env);
 }
 
 int main(int argc, char ** argv) {

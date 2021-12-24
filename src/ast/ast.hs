@@ -129,7 +129,7 @@ generate (ELetrec name reclamb body) names =
         (appendInst (InstList [DUM, NIL]) (generate reclamb nnames)) 
         (appendInst (InstList [CONS]) 
             (appendInst 
-                (generate (ELambda [name] body) names)
+                (generate (ELambda [name] body) nnames)
                 RAP))
 generate (EError) _ = ERR
 generate _ _ = NIL

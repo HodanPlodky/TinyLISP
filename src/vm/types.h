@@ -194,7 +194,7 @@ namespace secd {
             std::cout << ")";
         }
     }
-
+    #define __MAX_DEPTH__ 10
     template <typename T>
     void showValue(Value<T> val, int depth = 0) {
         if (std::holds_alternative<std::shared_ptr<T>>(val)) {
@@ -205,12 +205,12 @@ namespace secd {
             std::cout << "()";
         }
         else {
-            if (depth >= 20) {
+            if (depth >= __MAX_DEPTH__) {
                 std::cout << "(...)";
             }
             else {
                 std::cout << "( ";
-                showValueInner(val, depth + 1);
+                showValueInner(val, depth);
                 std::cout << ")";
             }
         }
@@ -224,7 +224,7 @@ namespace secd {
         }
         else if (std::holds_alternative<std::shared_ptr<secd::NilT>>(val)) {
         }
-        else if (depth >= 20) {
+        else if (depth >= __MAX_DEPTH__) {
             std::cout << "...";
         }
         else {
@@ -237,13 +237,13 @@ namespace secd {
             ) {
                 showValue(tmpcar, depth + 1);
                 std::cout << " ";
-                showValueInner(tmpcdr, depth + 1);
+                showValueInner(tmpcdr, depth);
             }
             else {
                 std::cout << "( ";
                 showValue(tmpcar, depth + 1);
                 std::cout << " ";
-                showValue(tmpcdr, depth + 1);
+                showValue(tmpcdr, depth);
                 std::cout << " )";
             }
         }
@@ -479,6 +479,10 @@ namespace secd {
                 auto tmp = data.top();
                 data.pop();
                 return tmp;
+            }
+
+            Stack<Data> & getData() {
+                return data;
             }
         private:
             Stack<Data> data;
