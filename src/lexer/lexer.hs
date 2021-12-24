@@ -10,6 +10,7 @@ data Keyword
     | Null
     | Define
     | Lambda
+    | Letrec
     deriving Show
 
 checkIdent :: String -> Token
@@ -22,6 +23,7 @@ checkIdent name =
         "null" -> TKw Null
         "define" -> TKw Define
         "lambda" -> TKw Lambda
+        "letrec" -> TKw Letrec
         n -> TIdent n
 
 data Token

@@ -33,6 +33,7 @@ expression (TLBrac:TKw FCons:rest) = expressionBin rest OCons
 expression (TLBrac:TKw Eq:rest) = expressionBin rest OEq
 expression (TLBrac:TKw Null:rest) = (ENull, rest) 
 expression (TLBrac:TKw Lambda:rest) = lambdaexpr rest
+expression (TLBrac:TKw Letrec:rest) = letrec rest
 expression (TKw Null : rest) = (ENull, rest)
 expression (TLBrac:TKw If:rest) =
     let (cond, t1) = factor rest
@@ -54,6 +55,19 @@ expression (TLBrac : tok : rest) =
     
 expression (_:rest) = (EError, rest)
 expression [] = (EError, [])
+
+letrec :: [Token] -> (Expr, [Token])
+letrec (TLBrac : TIdent name : TRBrac : TLBrac : rest) = 
+    let (reclamb, t1) = factor rest in
+    case (reclamb, t1) of
+        (ELambda args body, TRBrac : t2) -> 
+            case factor t2 of
+                (EError, _) -> (EError, rest)
+                (expr, TRBrac : t3) ->(ELetrec name reclamb expr, t3)
+                (_, _) -> (EError, rest)
+        (_, _) -> (EError, rest)
+
+letrec toks = (EError, toks)
 
 lambdaexpr :: [Token] -> (Expr, [Token])
 lambdaexpr (TLBrac : rest) = 

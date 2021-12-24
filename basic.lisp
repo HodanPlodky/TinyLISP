@@ -1,12 +1,6 @@
-((lambda (pow x) 
-    (if (eq? (pow x) 100) 
-        (pow (pow (pow (/ x 2))))
-        (pow (pow (pow x)))
-    )
-)(lambda (x) (* x x)) 10)
-(
-    ((lambda (a b) 
-        (lambda (f) 
-            (f (- a b)))
-    ) 20 30) (lambda (x) (* x 2))
+(letrec 
+    (fact) ((lambda (n)
+        (if (eq? 0 n) 1 (* n (fact (- n 1))))
+    ))
+    (fact 10)
 )

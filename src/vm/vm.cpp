@@ -152,6 +152,16 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                     (std::make_shared<inst::LT>(inst::LT())));
                 break;
             }
+            case 0x14 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::DUM>(inst::DUM())));
+                break;
+            }
+            case 0x15 : {
+                code->add(std::make_shared<inst::Inst>
+                    (std::make_shared<inst::RAP>(inst::RAP())));
+                break;
+            }
             case 0xfe : {
                 code->add(std::make_shared<inst::Inst>
                     (std::make_shared<inst::ERR>(inst::ERR())));
@@ -352,8 +362,8 @@ void run(
             datastack.pop();
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
             dump.dump(dumpdata);
-            code = std::make_shared<secd::Code>(car(closure));
-            env.set(cons(args, cdr(closure)));
+            code = std::make_shared<secd::Code>(secd::car(closure));
+            env.set(secd::cons(args, secd::cdr(closure)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
             auto res = datastack.top();
@@ -368,6 +378,28 @@ void run(
                 env.set(secd::cons<Data>(
                     secd::car(secd::cdr(secd::cdr(recovered))),
                     secd::Nil));
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
+            env.set(secd::cons<Data>(secd::cons<Data>(secd::Nil, secd::Nil), env.get()));
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::RAP>>(instruction)) {
+            auto closure = datastack.top();
+            datastack.pop();
+            auto args = datastack.top();
+            datastack.pop();
+            auto tmp = secd::car(env.get());
+            if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(tmp)) {
+                throw std::runtime_error("mate and dont know what would i tell you really fuck up");
+            }
+            if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(args)) {
+                throw std::runtime_error("mate and dont know what would i tell you really fuck up");
+            }
+            auto dummyenv = std::get<std::shared_ptr<secd::ConsCell<Data>>>(tmp);
+            *dummyenv->car = secd::cons<Data>(secd::car(secd::car(args)), secd::cons<Data>(dummyenv, secd::Nil));
+            auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
+            dump.dump(dumpdata);
+            code = std::make_shared<secd::Code>(car(closure));
+            env.set(secd::cons<Data>(tmp, secd::Nil));
         }
         else {
             throw std::runtime_error("Not implemented");

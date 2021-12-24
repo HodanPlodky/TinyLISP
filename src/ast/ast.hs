@@ -35,6 +35,7 @@ data Expr
     | ELambda [String] Expr --arguments and body
     | ECall Expr [Expr] -- callable expression and arguments
     | EList [Expr]
+    | ELetrec String Expr Expr --name, recursive-lambda body
     | EError
     deriving Show
 
@@ -64,11 +65,14 @@ data Inst
     | LDF Inst
     | AP
     | RTN
+    | DUM
+    | RAP
     deriving (Show, Eq, Ord)
 
 appendInst :: Inst -> Inst -> Inst
 appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
+appendInst (InstList l1) (InstList l2) = InstList (l1 ++ l2)
 
 prependInst :: Inst -> Inst -> Inst
 prependInst i (InstList l) = InstList (i : l)
@@ -119,6 +123,14 @@ generate (ECall callable args) names =
                 Prelude.foldr (\x acc -> acc ++ [generate x names, CONS]) [NIL] args) 
             (generate callable names))
         AP
+generate (ELetrec name reclamb body) names =
+    let nnames = [name] : names in
+    appendInst 
+        (appendInst (InstList [DUM, NIL]) (generate reclamb nnames)) 
+        (appendInst (InstList [CONS]) 
+            (appendInst 
+                (generate (ELambda [name] body) names)
+                RAP))
 generate (EError) _ = ERR
 generate _ _ = NIL
 
@@ -151,6 +163,8 @@ simpleSaves = fromList
     , (Ast.EQ, 0x11)
     , (Ast.GT, 0x12)
     , (Ast.LT, 0x13)
+    , (DUM, 0x14)
+    , (RAP, 0x15)
     , (ERR, 0xfe)
     ]
 

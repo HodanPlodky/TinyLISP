@@ -25,6 +25,8 @@ namespace inst {
     struct LDF{};
     struct AP{};
     struct RTN{};
+    struct DUM{};
+    struct RAP{};
 
     using Inst = std::variant<
         std::shared_ptr<ERR>,
@@ -46,7 +48,9 @@ namespace inst {
         std::shared_ptr<LD>,
         std::shared_ptr<LDF>,
         std::shared_ptr<AP>,
-        std::shared_ptr<RTN>>;
+        std::shared_ptr<RTN>,
+        std::shared_ptr<DUM>,
+        std::shared_ptr<RAP>>;
     
     struct LDC {
         LDC(int number) : number(number) {}
@@ -116,6 +120,12 @@ namespace inst {
         else if (std::holds_alternative<std::shared_ptr<inst::RTN>>(instruction)) {
             stream << "RTN";
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
+            stream << "DUM";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::RAP>>(instruction)) {
+            stream << "RAP";
+        }
         else if (std::holds_alternative<std::shared_ptr<inst::ERR>>(instruction)) {
             stream << "ERR";
         }
@@ -146,8 +156,8 @@ namespace secd {
     
     template <typename T>
     struct ConsCell {
-        Value<T> car;
-        Value<T> cdr;
+        std::shared_ptr<Value<T>> car;
+        std::shared_ptr<Value<T>> cdr;
     };
 
     template <typename T>
@@ -156,7 +166,7 @@ namespace secd {
             std::runtime_error("car error (value is not a cons cell)");
         }
         auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
-        return conscell->car;
+        return *(conscell->car);
     }
     
     template <typename T>
@@ -165,7 +175,7 @@ namespace secd {
             std::runtime_error("cdr error (value is not a cons cell)");
         }
         auto conscell = std::move(std::get<std::shared_ptr<ConsCell<T>>>(val));
-        return conscell->cdr;
+        return *(conscell->cdr);
     }
 
     void showInsts(Value<inst::Inst> val) {
@@ -186,7 +196,7 @@ namespace secd {
     }
 
     template <typename T>
-    void showValue(Value<T> val) {
+    void showValue(Value<T> val, int depth = 0) {
         if (std::holds_alternative<std::shared_ptr<T>>(val)) {
             auto tmp = *std::get<std::shared_ptr<T>>(val);
             std::cout << tmp;
@@ -195,19 +205,27 @@ namespace secd {
             std::cout << "()";
         }
         else {
-            std::cout << "( ";
-            showValueInner(val);
-            std::cout << ")";
+            if (depth >= 20) {
+                std::cout << "(...)";
+            }
+            else {
+                std::cout << "( ";
+                showValueInner(val, depth + 1);
+                std::cout << ")";
+            }
         }
     }
 
     template <typename T>
-    void showValueInner(Value<T> val) {
+    void showValueInner(Value<T> val, int depth = 0) {
         if (std::holds_alternative<std::shared_ptr<T>>(val)) {
             auto tmp = *std::get<std::shared_ptr<T>>(val);
             std::cout << tmp;
         }
         else if (std::holds_alternative<std::shared_ptr<secd::NilT>>(val)) {
+        }
+        else if (depth >= 20) {
+            std::cout << "...";
         }
         else {
             auto tmpcar = car(val);
@@ -217,15 +235,15 @@ namespace secd {
                 std::holds_alternative<std::shared_ptr<NilT>>(tmpcdr)
                 
             ) {
-                showValue(tmpcar);
+                showValue(tmpcar, depth + 1);
                 std::cout << " ";
-                showValueInner(tmpcdr);
+                showValueInner(tmpcdr, depth + 1);
             }
             else {
                 std::cout << "( ";
-                showValue(tmpcar);
+                showValue(tmpcar, depth + 1);
                 std::cout << " ";
-                showValue(tmpcdr);
+                showValue(tmpcdr, depth + 1);
                 std::cout << " )";
             }
         }
@@ -234,8 +252,8 @@ namespace secd {
     template <typename T>
     Value<T> cons(Value<T> car, Value<T> cdr) {
         auto cell = std::make_shared<ConsCell<T>>(ConsCell<T>());
-        cell->car = std::move(car);
-        cell->cdr = std::move(cdr);
+        cell->car = std::make_shared<Value<T>>(car);
+        cell->cdr = std::make_shared<Value<T>>(cdr);
         return std::move(cell);
     }
 
@@ -245,8 +263,8 @@ namespace secd {
             return cons<T>(std::move(val), std::move(Nil));
         }
         if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            auto tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
-            return cons(std::move(tmp->car), std::move(append(tmp->cdr, val)));
+            Value<T> tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
+            return cons(std::move(car(tmp)), std::move(append(cdr(tmp), val)));
         }
         std::runtime_error("cannot append");
         return std::move(Nil);
@@ -264,8 +282,8 @@ namespace secd {
             return cons<T>(std::move(val), std::move(Nil));
         }
         if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            auto tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
-            return cons(std::move(tmp->car), std::move(appendLists(tmp->cdr, val)));
+            Value<T> tmp = std::move(std::get<std::shared_ptr<ConsCell<T>>>(cell));
+            return cons(std::move(car(tmp)), std::move(appendLists(cdr(tmp), val)));
         }
         std::runtime_error("cannot append");
         return std::move(Nil);
