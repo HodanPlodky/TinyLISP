@@ -3,7 +3,7 @@ module Parser (parse, parseImp) where
 
 import Lexer
 import Ast
-import Debug.Trace
+--import Debug.Trace
 
 parse :: [Token] -> Expr
 parse toks =

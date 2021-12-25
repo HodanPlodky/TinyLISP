@@ -6,7 +6,7 @@ import Data.Binary.Put
 import Data.Binary
 import System.IO
 import Data.Map
-import Debug.Trace
+--import Debug.Trace
 --import Data.Bits.Extras
 
 
@@ -82,7 +82,7 @@ appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
 
 generate :: Expr -> [[String]] -> Inst
-generate e s | trace ("generate " ++ show e ++ show s) False = undefined
+--generate e s | trace ("generate " ++ show e ++ show s) False = undefined
 generate (ENum n) _ = LDC n
 generate (EIdent s) names =
     let lx = Prelude.filter (\i -> elem s (names !! i)) [0..] in
