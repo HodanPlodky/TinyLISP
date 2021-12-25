@@ -31,6 +31,8 @@ expression (TLBrac:TLt:rest) = expressionBin rest OLt
 expression (TLBrac:TGt:rest) = expressionBin rest OGt
 expression (TLBrac:TKw FCons:rest) = expressionBin rest OCons
 expression (TLBrac:TKw Eq:rest) = expressionBin rest OEq
+expression (TLBrac:TKw Car:rest) = expressionUnary rest UCar
+expression (TLBrac:TKw Cdr:rest) = expressionUnary rest UCdr
 expression (TLBrac:TKw Null:rest) = (ENull, rest) 
 expression (TLBrac:TKw Lambda:rest) = lambdaexpr rest
 expression (TLBrac:TKw Letrec:rest) = letrec rest
@@ -52,7 +54,9 @@ expression (TLBrac : tok : rest) =
         (EError, _) -> (EError, t1)
         (_, TRBrac:x) -> (ECall callable args, x)
         (_, _) -> (EError, tok:rest)
-    
+
+expression (TTick : rest) = dataexpr rest
+
 expression (_:rest) = (EError, rest)
 expression [] = (EError, [])
 
@@ -60,7 +64,7 @@ letrec :: [Token] -> (Expr, [Token])
 letrec (TLBrac : TIdent name : TRBrac : TLBrac : rest) = 
     let (reclamb, t1) = factor rest in
     case (reclamb, t1) of
-        (ELambda args body, TRBrac : t2) -> 
+        (ELambda _ _, TRBrac : t2) -> 
             case factor t2 of
                 (EError, _) -> (EError, rest)
                 (expr, TRBrac : t3) ->(ELetrec name reclamb expr, t3)
@@ -98,8 +102,32 @@ expressionBin t op =
       (TRBrac:rest) -> (EBinOp op l r, rest)
       _ -> (EError, toks)
 
+expressionUnary :: [Token] -> UnOp -> (Expr, [Token])
+expressionUnary t op =
+    let (e, toks) = factor t in
+    case toks of
+        (TRBrac : rest) -> (EUnaryOp op e, rest)
+        _ -> (EError, toks)
+    
+dataexpr :: [Token] -> (Expr, [Token])
+dataexpr (TNumber n : rest) = (ENum n, rest)
+dataexpr (TLBrac : rest) = listdata rest
+dataexpr toks = (EError, toks)
+
+listdata :: [Token] -> (Expr, [Token])
+listdata (TRBrac : rest) = (ENull, rest)
+listdata toks =
+    let (car, t1) = dataexpr toks
+        (cdr, t2) = listdata t1
+    in
+    case (car, cdr) of
+        (EError, _) -> (EError, toks)
+        (_, EError) -> (EError, toks)
+        (_, _) -> (EBinOp OCons car cdr, t2)
+
 factor :: [Token] -> (Expr, [Token])
 --factor t | trace ("factor " ++ show t) False = undefined
+factor (TTick : rest) = dataexpr rest
 factor (TNumber n : rest) = (ENum n, rest)
 factor (TIdent s : rest) = (EIdent s, rest)
 factor (TKw Null : rest) = (ENull, rest)

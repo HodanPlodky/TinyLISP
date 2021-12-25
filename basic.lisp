@@ -1,10 +1,11 @@
-(+ 2000 0)
-(letrec (seq) ((lambda (from to step f)
-    (if (> from to)
-        null
-        (cons (f from) (seq (+ from step) to step f))
+(letrec 
+    (foo) ((lambda (n)
+        (+ n 2)
+    ))
+    (letrec 
+        (bar) ((lambda (n) 
+            (foo (- n 1))
+        ))
+        (bar (foo 3))
     )
-))
-(letrec (sum) ((lambda (n) (if (eq? n 0) 0 (+ n (sum (- n 1))))))
-    (seq 1 1000 1 (lambda (x) (cons x (sum x))))
-))
+)

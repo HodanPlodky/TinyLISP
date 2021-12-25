@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Ast (Inst(..), Expr(..), BinOp(..), appendExpr, generate, save) where
+module Ast (Inst(..), Expr(..), BinOp(..), UnOp(..), appendExpr, generate, save) where
 
 import qualified Data.ByteString.Lazy as BIN
 import Data.Binary.Put
 import Data.Binary
 import System.IO
 import Data.Map
---import Debug.Trace
+import Debug.Trace
 --import Data.Bits.Extras
 
 
@@ -21,6 +21,11 @@ data BinOp
     | OCons
     deriving Show
 
+data UnOp
+    = UCar
+    | UCdr
+    deriving Show
+
 data Expr
     = ENum Int
     | EIdent String
@@ -28,6 +33,7 @@ data Expr
     | ENull
     | EFunc
     | EBinOp BinOp Expr Expr
+    | EUnaryOp UnOp Expr
     | EIf   { cond :: Expr
             , thenB :: Expr
             , elseb :: Expr
@@ -67,21 +73,17 @@ data Inst
     | RTN
     | DUM
     | RAP
+    | READ
     deriving (Show, Eq, Ord)
 
 appendInst :: Inst -> Inst -> Inst
+appendInst (InstList l1) (InstList l2) = InstList (l1 ++ l2)
 appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
-appendInst (InstList l1) (InstList l2) = InstList (l1 ++ l2)
-
-prependInst :: Inst -> Inst -> Inst
-prependInst i (InstList l) = InstList (i : l)
-prependInst i1 i2 = InstList [i1, i2]
 
 generate :: Expr -> [[String]] -> Inst
---generate e | trace ("generate " ++ show e) False = undefined
+generate e s | trace ("generate " ++ show e ++ show s) False = undefined
 generate (ENum n) _ = LDC n
---watch me create undefined nvm i created error
 generate (EIdent s) names =
     let lx = Prelude.filter (\i -> elem s (names !! i)) [0..] in
     case lx of
@@ -90,6 +92,10 @@ generate (EIdent s) names =
             [] -> ERR
             y -> LD (head x) (head y)
     
+generate (EUnaryOp UCar x) names =
+    InstList [generate x names, CAR]
+generate (EUnaryOp UCdr x) names =
+    InstList [generate x names, CDR]
 generate (EBinOp OAdd x y) names = 
     InstList [generate x names , generate y names, ADD]
 generate (EBinOp OSub x y) names = 
@@ -129,7 +135,7 @@ generate (ELetrec name reclamb body) names =
         (appendInst (InstList [DUM, NIL]) (generate reclamb nnames)) 
         (appendInst (InstList [CONS]) 
             (appendInst 
-                (generate (ELambda [name] body) nnames)
+                (generate (ELambda [name] body) names)
                 RAP))
 generate (EError) _ = ERR
 generate _ _ = NIL
@@ -165,6 +171,7 @@ simpleSaves = fromList
     , (Ast.LT, 0x13)
     , (DUM, 0x14)
     , (RAP, 0x15)
+    , (READ, 0x16)
     , (ERR, 0xfe)
     ]
 

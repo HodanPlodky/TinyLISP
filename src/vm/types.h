@@ -194,7 +194,7 @@ namespace secd {
             std::cout << ")";
         }
     }
-    #define __MAX_DEPTH__ 10
+    #define __MAX_DEPTH__ 8 
     template <typename T>
     void showValue(Value<T> val, int depth = 0) {
         if (std::holds_alternative<std::shared_ptr<T>>(val)) {
@@ -202,7 +202,7 @@ namespace secd {
             std::cout << tmp;
         }
         else if (std::holds_alternative<std::shared_ptr<secd::NilT>>(val)) {
-            std::cout << "()";
+            std::cout << "nil";
         }
         else {
             if (depth >= __MAX_DEPTH__) {

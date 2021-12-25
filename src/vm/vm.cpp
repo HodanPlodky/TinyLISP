@@ -212,8 +212,8 @@ void numbinaryop(
             auto dx = *std::get<std::shared_ptr<Data>>(x);
             auto dy = *std::get<std::shared_ptr<Data>>(y);
             if (
-                std::holds_alternative<int>(dx) &&
-                std::holds_alternative<int>(dy)
+               std::holds_alternative<int>(dx) && 
+               std::holds_alternative<int>(dy)
             ) {
                 int nx = std::get<int>(dx);
                 int ny = std::get<int>(dy);
@@ -250,7 +250,7 @@ void verboseWriteout(
     secd::Dump & dump,
     secd::Enviroment & env
 ) {
-            system("clear");
+            //system("clear");
             std::cout << "stack :" << std::endl;
             traverse_stack(datastack);
             std::cout << std::endl;
@@ -266,6 +266,54 @@ void verboseWriteout(
             std::cout << std::endl;
             std::cout << std::endl;
             std::cin.get();
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << std::endl;
+}
+
+bool tmpCompareData(secd::Value<Data> x, secd::Value<Data> y) {
+    if (
+        std::holds_alternative<std::shared_ptr<Data>>(x) &&
+        std::holds_alternative<std::shared_ptr<Data>>(y)
+    ) {
+        auto dx = *std::get<std::shared_ptr<Data>>(x);
+        auto dy = *std::get<std::shared_ptr<Data>>(y);
+        if (
+            std::holds_alternative<int>(dx) &&
+            std::holds_alternative<int>(dy)
+        ) {
+            int nx = std::get<int>(dx);
+            int ny = std::get<int>(dy);
+            return ny == nx;
+        }
+        return false;
+    }
+    else if (
+        std::holds_alternative<std::shared_ptr<secd::NilT>>(x) &&
+        std::holds_alternative<std::shared_ptr<secd::NilT>>(y)
+    ) {
+        return true;
+    }
+    else if (
+        std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(x) &&
+        std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(y)
+    ) {
+        return 
+            tmpCompareData(secd::car(x), secd::car(y)) &&
+            tmpCompareData(secd::cdr(x), secd::cdr(y));
+    }
+    return false;
 }
 
 void run(
@@ -286,34 +334,43 @@ void run(
         }
         auto instruction = code->nextInst();
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
-            //std::cout << "LCD" << std::endl;
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
             datastack.push(std::make_shared<Data>(ldc->number));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
-            //std::cout << "ADD" << std::endl;
             numbinaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SUB>>(instruction)) {
-            //std::cout << "SUB" << std::endl;
             numbinaryop(datastack, [](int x, int y) {return y - x;}, "SUB");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::MUL>>(instruction)) {
-            //std::cout << "MUL" << std::endl;
             numbinaryop(datastack, [](int x, int y) {return y * x;}, "MUL");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DIV>>(instruction)) {
-            //std::cout << "DIV" << std::endl;
             numbinaryop(datastack, [](int x, int y) {return y / x;}, "DIV");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::EQ>>(instruction)) {
-            numbinaryop(datastack, [](int x, int y) {return y == x ? 1 : 0;}, "EQ");
+            auto op = [](secd::Value<Data> x, secd::Value<Data> y) -> secd::Value<Data> {
+                return std::make_shared<Data>(tmpCompareData(x, y) ? 1 : 0);
+            };
+            binaryop(datastack, op, "EQ");
+            ///numbinaryop(datastack, [](int x, int y) {return y == x ? 1 : 0;}, "EQ");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::GT>>(instruction)) {
             numbinaryop(datastack, [](int x, int y) {return y > x ? 1 : 0;}, "GT");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::LT>>(instruction)) {
             numbinaryop(datastack, [](int x, int y) {return y < x ? 1 : 0;}, "LT");
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::CAR>>(instruction)) {
+            auto tmp = datastack.top();
+            datastack.pop();
+            datastack.push(secd::car(tmp));
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::CDR>>(instruction)) {
+            auto tmp = datastack.top();
+            datastack.pop();
+            datastack.push(secd::cdr(tmp));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
             //std::cout << "JOIN" << std::endl;
@@ -373,6 +430,11 @@ void run(
             datastack.pop();
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
             dump.dump(dumpdata);
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;*/
             code = std::make_shared<secd::Code>(secd::car(closure));
             env.set(secd::cons(args, secd::cdr(closure)));
         }
@@ -390,26 +452,97 @@ void run(
                     secd::cdr(secd::cdr(recovered)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
-            env.set(secd::cons<Data>(secd::cons<Data>(secd::Nil, secd::Nil), env.get()));
+            env.set(secd::cons<Data>(secd::Nil, env.get()));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RAP>>(instruction)) {
             auto closure = datastack.top();
             datastack.pop();
             auto args = datastack.top();
             datastack.pop();
-            auto tmp = secd::car(env.get());
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
+            auto tmp = env.get();
             if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(tmp)) {
                 throw std::runtime_error("mate and dont know what would i tell you really fuck up");
             }
             if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(args)) {
                 throw std::runtime_error("mate and dont know what would i tell you really fuck up");
             }
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
             auto dummyenv = std::get<std::shared_ptr<secd::ConsCell<Data>>>(tmp);
-            *dummyenv->car = secd::cons<Data>(secd::car(secd::car(args)), secd::cons<Data>(dummyenv, secd::Nil));
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
+            *dummyenv->car = secd::cons<Data>(secd::car(args), secd::cons<Data>(dummyenv, secd::Nil));
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), cdr(env.get())));
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
             dump.dump(dumpdata);
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
             code = std::make_shared<secd::Code>(car(closure));
-            env.set(secd::cons<Data>(tmp, cdr(closure)));
+            /*
+            std::cout << "closure : ";
+            secd::showValue(closure);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            std::cout << "args : ";
+            secd::showValue(args);
+            std::cout << std::endl;
+            std::cout << std::endl;
+            verboseWriteout(code, datastack, dump, env);*/
+            env.set(cdr(closure));
+            //verboseWriteout(code, datastack, dump, env);
         }
         else {
             throw std::runtime_error("Not implemented");

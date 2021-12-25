@@ -11,6 +11,8 @@ data Keyword
     | Define
     | Lambda
     | Letrec
+    | Car
+    | Cdr
     deriving Show
 
 checkIdent :: String -> Token
@@ -24,6 +26,8 @@ checkIdent name =
         "define" -> TKw Define
         "lambda" -> TKw Lambda
         "letrec" -> TKw Letrec
+        "car" -> TKw Car
+        "cdr" -> TKw Cdr
         n -> TIdent n
 
 data Token
@@ -88,6 +92,7 @@ getTokens (c:rest) =
                     '/' -> TDiv
                     '<' -> TLt
                     '>' -> TGt
+                    '=' -> TKw Eq
                     _ -> TError "Undefined token") : getTokens rest
             )
             ]
