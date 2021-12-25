@@ -55,3 +55,22 @@ null
     ))
     (fact 5)
 )
+(letrec 
+    (fact) ((lambda (n)
+        (if (eq? 0 n) 1 (* n (fact (- n 1))))
+    ))
+    (letrec 
+        (sum) ((lambda (n) 
+            (if (eq? 1 n) 1 (+ n (sum (- n 1))))
+        ))
+        (fact (sum 3))
+    )
+)
+(letrec (seq) ((lambda (from to step f)
+    (if (> from to)
+        null
+        (cons (f from) (seq (+ from step) to step f))
+    )
+))
+(seq 1 10 2 (lambda (x) (* x 2)))
+)

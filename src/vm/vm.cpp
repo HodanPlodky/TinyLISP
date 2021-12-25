@@ -27,8 +27,16 @@
 using secd::Data;
 
 long readLong(std::ifstream & stream) {
-    char buffer[8];
-    stream.read(buffer, 8);
+    uint8_t buffer[8];
+    stream.read((char*)buffer, 8);
+    /*
+    for (int i = 0; i < 8; i++) {
+        unsigned int x = 0;
+        x += buffer[i];
+        std::cout << std::hex << x << " ";
+    }
+    std::cout << std::dec << std::endl;
+    */
     return 
         (long)buffer[7] | (long)buffer[6] << 8 | (long)buffer[5] << 16 | (long)buffer[4] << 24 | 
         (long)buffer[3] << 32 | (long)buffer[2]<< 40 | (long)buffer[1] << 48 |
@@ -167,24 +175,13 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                     (std::make_shared<inst::ERR>(inst::ERR())));
                 break;
             }
-            case -1 : {
+            case 0xff : {
                 return code;
             }
         }
     }
     return code;
 } 
-
-/*
-void writeValue(secd::Value<Data> val) {
-    if (std::holds_alternative<std::shared_ptr<Data>>(val)) {
-        std::cout << *std::get<std::shared_ptr<Data>>(val) << std::endl;
-    }
-    else {
-        throw std::runtime_error("Not implemented");
-    }
-}
-*/
 
 void binaryop(
     secd::Stack<Data> & datastack, 
