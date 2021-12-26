@@ -57,66 +57,54 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                 break;
             }
             case 0x01 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::ADD>(inst::ADD())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::ADD>()));
                 break;
             }
             case 0x02 : {
                 if (stream.eof())
                     throw std::runtime_error("After LDC must be number");
                 out = readLong(stream);
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::LDC>(inst::LDC(out))));
+                code->add(std::make_shared<Data>(std::make_shared<inst::LDC>(out)));
                 break;
             }
             case 0x03 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::NIL>(inst::NIL())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::NIL>()));
                 break;
             }
             case 0x04 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::SUB>(inst::SUB())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::SUB>()));
                 break;
             }
             case 0x05 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::MUL>(inst::MUL())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::MUL>()));
                 break;
             }
             case 0x06 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::DIV>(inst::DIV())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::DIV>()));
                 break;
             }
             case 0x07 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::CONS>(inst::CONS())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::CONS>()));
                 break;
             }
             case 0x08 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::CAR>(inst::CAR())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::CAR>()));
                 break;
             }
             case 0x09 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::CDR>(inst::CDR())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::CDR>()));
                 break;
             }
             case 0x0a : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::CONSP>(inst::CONSP())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::CONSP>()));
                 break;
             }
             case 0x0b : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::SEL>(inst::SEL())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::SEL>()));
                 break;
             }
             case 0x0c : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::JOIN>(inst::JOIN())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::JOIN>()));
                 break;
             }
             case 0x0d : {
@@ -126,53 +114,43 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                 if (stream.eof())
                     throw std::runtime_error("After LD must be two number");
                 auto y = readLong(stream);
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::LD>(inst::LD(x, y))));
+                code->add(std::make_shared<Data>(std::make_shared<inst::LD>(x, y)));
                 break;
             }
             case 0x0e : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::LDF>(inst::LDF())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::LDF>()));
                 break;
             }
             case 0x0f : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::AP>(inst::AP())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::AP>()));
                 break;
             }
             case 0x10 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::RTN>(inst::RTN())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::RTN>()));
                 break;
             }
             case 0x11 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::EQ>(inst::EQ())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::EQ>()));
                 break;
             }
             case 0x12 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::GT>(inst::GT())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::GT>()));
                 break;
             }
             case 0x13 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::LT>(inst::LT())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::LT>()));
                 break;
             }
             case 0x14 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::DUM>(inst::DUM())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::DUM>()));
                 break;
             }
             case 0x15 : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::RAP>(inst::RAP())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::RAP>()));
                 break;
             }
             case 0xfe : {
-                code->add(std::make_shared<inst::Inst>
-                    (std::make_shared<inst::ERR>(inst::ERR())));
+                code->add(std::make_shared<Data>(std::make_shared<inst::ERR>()));
                 break;
             }
             case 0xff : {
@@ -267,7 +245,7 @@ void verboseWriteout(
             secd::showValue(code->getData());
             std::cout << std::endl;
             std::cout << std::endl;
-            std::cin.get();
+            //std::cin.get();
             std::cout << std::endl;
             std::cout << std::endl;
             std::cout << std::endl;
@@ -328,6 +306,7 @@ void run(
     int cycle = -1;
     while(!code->empty()) {
         cycle++;
+        //std::cout << "cycle : " << cycle << std::endl;
         if (verbose) {
             verboseWriteout(code, datastack, dump, env, cycle);
         }
@@ -358,7 +337,6 @@ void run(
                 return std::make_shared<Data>(tmpCompareData(x, y) ? 1 : 0);
             };
             binaryop(datastack, op, "EQ");
-            ///numbinaryop(datastack, [](int x, int y) {return y == x ? 1 : 0;}, "EQ");
         }
         else if (std::holds_alternative<std::shared_ptr<inst::GT>>(instruction)) {
             numbinaryop(datastack, [](int x, int y) {return y > x ? 1 : 0;}, "GT");
@@ -382,7 +360,6 @@ void run(
             code->prepend(recovered);
         }
         else if (std::holds_alternative<std::shared_ptr<inst::SEL>>(instruction)) {
-            //std::cout << "SEL" << std::endl;
             if (datastack.empty())
                 throw std::runtime_error("SEL needs one argument on stack");
             auto tmp = datastack.top();
@@ -451,7 +428,7 @@ void run(
                     secd::cdr(secd::cdr(recovered)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
-            env.set(secd::cons<Data>(std::move(secd::Nil), env.get()));
+            env.set(secd::cons<Data>(secd::Nil, env.get()));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RAP>>(instruction)) {
             auto closure = datastack.top();
@@ -466,7 +443,7 @@ void run(
                 throw std::runtime_error("mate and dont know what would i tell you really fuck up");
             }
             auto dummyenv = std::get<std::shared_ptr<secd::ConsCell<Data>>>(tmp);
-            *dummyenv->car = secd::cons<Data>(secd::car(args), secd::cons<Data>(dummyenv, secd::Nil));
+            dummyenv->car = secd::cons<Data>(secd::car(args), tmp);
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), cdr(env.get())));
             dump.dump(dumpdata);
             code = std::make_shared<secd::Code>(car(closure));

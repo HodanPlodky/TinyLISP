@@ -130,3 +130,4 @@ null
         (bar (foo 3))
     )
 )
+(letrec (foo) ((lambda (x) (+ x 1))) (foo 3))

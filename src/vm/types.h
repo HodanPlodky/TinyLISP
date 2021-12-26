@@ -162,8 +162,8 @@ namespace secd {
     
     template <typename T>
     struct ConsCell {
-        std::shared_ptr<Value<T>> car;
-        std::shared_ptr<Value<T>> cdr;
+        Value<T> car;
+        Value<T> cdr;
     };
 
     template <typename T>
@@ -172,7 +172,7 @@ namespace secd {
             std::runtime_error("car error (value is not a cons cell)");
         }
         auto conscell = std::get<std::shared_ptr<ConsCell<T>>>(val);
-        return *(conscell->car);
+        return (conscell->car);
     }
     
     template <typename T>
@@ -181,7 +181,47 @@ namespace secd {
             std::runtime_error("cdr error (value is not a cons cell)");
         }
         auto conscell = std::get<std::shared_ptr<ConsCell<T>>>(val);
-        return *(conscell->cdr);
+        return (conscell->cdr);
+    }
+
+    template <typename T>
+    Value<T> cons(Value<T> car, Value<T> cdr) {
+        auto cell = std::make_shared<ConsCell<T>>();
+        cell->car = car;
+        cell->cdr = cdr;
+        return cell;
+    }
+
+    template <typename T>
+    Value<T> append(Value<T> cell, Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
+            return cons<T>(val, Nil);
+        }
+        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
+            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
+            return cons(car(tmp), append(cdr(tmp), val));
+        }
+        std::runtime_error("cannot append");
+        return Nil;
+    }
+
+    template <typename T>
+    Value<T> appendLists(Value<T> cell, Value<T> val) {
+        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
+            if (
+                std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val) ||
+                std::holds_alternative<std::shared_ptr<NilT>>(val)
+            ) {
+                return val;
+            }
+            return cons<T>(val, Nil);
+        }
+        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
+            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
+            return cons(car(tmp), appendLists(cdr(tmp), val));
+        }
+        std::runtime_error("cannot append");
+        return Nil;
     }
 
     void showInsts(Value<inst::Inst> val) {
@@ -254,47 +294,7 @@ namespace secd {
             }
         }
     }
-
-    template <typename T>
-    Value<T> cons(Value<T> car, Value<T> cdr) {
-        auto cell = std::make_shared<ConsCell<T>>(ConsCell<T>());
-        cell->car = std::make_shared<Value<T>>(car);
-        cell->cdr = std::make_shared<Value<T>>(cdr);
-        return cell;
-    }
-
-    template <typename T>
-    Value<T> append(Value<T> cell, Value<T> val) {
-        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
-            return cons<T>(val, Nil);
-        }
-        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
-            return cons(car(tmp), append(cdr(tmp), val));
-        }
-        std::runtime_error("cannot append");
-        return Nil;
-    }
-
-    template <typename T>
-    Value<T> appendLists(Value<T> cell, Value<T> val) {
-        if (std::holds_alternative<std::shared_ptr<NilT>>(cell)) {
-            if (
-                std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val) ||
-                std::holds_alternative<std::shared_ptr<NilT>>(val)
-            ) {
-                return val;
-            }
-            return cons<T>(val, Nil);
-        }
-        if (std::holds_alternative<std::shared_ptr<ConsCell<T>>>(cell)) {
-            Value<T> tmp = std::get<std::shared_ptr<ConsCell<T>>>(cell);
-            return cons(car(tmp), appendLists(cdr(tmp), val));
-        }
-        std::runtime_error("cannot append");
-        return Nil;
-    }
-
+    
     using Data = std::variant<
             int,
             inst::Inst
@@ -382,11 +382,11 @@ namespace secd {
                     data = cons(val, data);
             }
 
-            void add(Value<inst::Inst> val) {
-                if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
-                    Data d = *std::get<std::shared_ptr<inst::Inst>>(val);
-                    Value<Data> tmp = std::make_shared<Data>(d);
-                    data = append(data, tmp);
+            void add(Value<Data> val) {
+                if (std::holds_alternative<std::shared_ptr<Data>>(val)) {
+                    //Data d = std::get<std::shared_ptr<inst::Inst>>(val);
+                    //Value<Data> tmp = val;
+                    data = append(data, val);
                 }
                 else {
                     throw std::runtime_error("Can only add instruction to code");
