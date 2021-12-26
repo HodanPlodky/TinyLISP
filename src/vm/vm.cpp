@@ -248,10 +248,12 @@ void verboseWriteout(
     std::shared_ptr<secd::Code> code,
     secd::Stack<Data> & datastack,
     secd::Dump & dump,
-    secd::Enviroment & env
+    secd::Enviroment & env,
+    int cycle
 ) {
             //system("clear");
-            std::cout << "stack :" << std::endl;
+            std::cout << "cycle : " << cycle << std::endl;
+            std::cout << "stack : " << std::endl;
             traverse_stack(datastack);
             std::cout << std::endl;
             std::cout << "dump : " << std::endl;
@@ -323,9 +325,11 @@ void run(
     secd::Enviroment & env,
     bool verbose
 ) {
+    int cycle = -1;
     while(!code->empty()) {
+        cycle++;
         if (verbose) {
-            verboseWriteout(code, datastack, dump, env);
+            verboseWriteout(code, datastack, dump, env, cycle);
         }
         if (code->isHeadList()) {
             auto list = code->next();
@@ -430,11 +434,6 @@ void run(
             datastack.pop();
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), env.get()));
             dump.dump(dumpdata);
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;*/
             code = std::make_shared<secd::Code>(secd::car(closure));
             env.set(secd::cons(args, secd::cdr(closure)));
         }
@@ -452,23 +451,13 @@ void run(
                     secd::cdr(secd::cdr(recovered)));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
-            env.set(secd::cons<Data>(secd::Nil, env.get()));
+            env.set(secd::cons<Data>(std::move(secd::Nil), env.get()));
         }
         else if (std::holds_alternative<std::shared_ptr<inst::RAP>>(instruction)) {
             auto closure = datastack.top();
             datastack.pop();
             auto args = datastack.top();
             datastack.pop();
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             auto tmp = env.get();
             if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(tmp)) {
                 throw std::runtime_error("mate and dont know what would i tell you really fuck up");
@@ -476,80 +465,19 @@ void run(
             if (!std::holds_alternative<std::shared_ptr<secd::ConsCell<Data>>>(args)) {
                 throw std::runtime_error("mate and dont know what would i tell you really fuck up");
             }
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             auto dummyenv = std::get<std::shared_ptr<secd::ConsCell<Data>>>(tmp);
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             *dummyenv->car = secd::cons<Data>(secd::car(args), secd::cons<Data>(dummyenv, secd::Nil));
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             auto dumpdata = secd::cons(datastack.getData(), secd::cons(code->getData(), cdr(env.get())));
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             dump.dump(dumpdata);
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             code = std::make_shared<secd::Code>(car(closure));
-            /*
-            std::cout << "closure : ";
-            secd::showValue(closure);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << "args : ";
-            secd::showValue(args);
-            std::cout << std::endl;
-            std::cout << std::endl;
-            verboseWriteout(code, datastack, dump, env);*/
             env.set(cdr(closure));
-            //verboseWriteout(code, datastack, dump, env);
         }
         else {
             throw std::runtime_error("Not implemented");
         }
     }
     if (verbose)
-        verboseWriteout(code, datastack, dump, env);
+        verboseWriteout(code, datastack, dump, env, cycle);
 }
 
 int main(int argc, char ** argv) {

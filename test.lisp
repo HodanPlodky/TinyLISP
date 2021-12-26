@@ -110,3 +110,23 @@ null
         (map (lambda (x) (* x x)) '(1 2 3))
     )
 )
+(letrec 
+    (append) ((lambda (l e)
+        (if (eq? l null)
+            (cons e null)
+            (cons (car l) (append (cdr l) e))
+        )
+    ))
+    (append '(1 2 3) 4)
+)
+(letrec 
+    (foo) ((lambda (n)
+        (+ n 2)
+    ))
+    (letrec 
+        (bar) ((lambda (n) 
+            (foo (- n 1))
+        ))
+        (bar (foo 3))
+    )
+)

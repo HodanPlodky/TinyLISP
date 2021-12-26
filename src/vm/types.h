@@ -129,6 +129,12 @@ namespace inst {
         else if (std::holds_alternative<std::shared_ptr<inst::ERR>>(instruction)) {
             stream << "ERR";
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::CAR>>(instruction)) {
+            stream << "CAR";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::CDR>>(instruction)) {
+            stream << "CDR";
+        }
         else {
             stream << "mate too fast";
         }
