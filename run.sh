@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./main $1 a.out && ./vm a.out
+./compiler $1 a.out && ./vm a.out

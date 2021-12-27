@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Parser (parse) where
+module Parser (parse, parseImp) where
 
 import Lexer
 import Ast
@@ -53,6 +53,16 @@ expression (TLBrac:TKw If:rest) =
         (TRBrac:rest) -> (EIf cond thenB elseB, rest)
         _ -> (EError, toks)
 
+-- read
+expression (TLBrac : TKw KwRead : TRBrac : rest) = (ERead, rest)
+
+-- print
+expression (TLBrac:TKw KwPrint:rest) =
+    let (e, toks) = factor rest in
+    case toks of
+        (TRBrac : rest) -> (EPrint e, rest)
+        _ -> (EError, toks)
+
 -- parsing function applications
 expression (TLBrac : tok : rest) =
     let (callable, t1) = factor (tok : rest)
@@ -64,7 +74,6 @@ expression (TLBrac : tok : rest) =
         (_, _) -> (EError, tok:rest)
 
 expression (TTick : rest) = dataexpr rest
-
 expression (_:rest) = (EError, rest)
 expression [] = (EError, [])
 

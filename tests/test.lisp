@@ -87,6 +87,7 @@ null
 (cons 3 '(1 (2 4) 3))
 ((lambda (l f) (f l)) '(1 2 3) (lambda (l) (cons 3 l)))
 (cdr '(1 2 3 4))
+(print '(1 2 3))
 (letrec 
     (fold) ((lambda (f acc l)
         (if (eq? l null) 
@@ -127,7 +128,7 @@ null
         (bar) ((lambda (n) 
             (foo (- n 1))
         ))
-        (bar (foo 3))
+        (bar (foo (read)))
     )
 )
 (letrec (foo) ((lambda (x) (+ x 1))) (foo 3))

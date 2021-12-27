@@ -445,6 +445,20 @@ void run(
             code = std::make_shared<secd::Code>(car(closure));
             env.set(cdr(closure));
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::READ>>(instruction)) {
+            std::cout << "Input value (integer) : ";
+            int input;
+            std::cin >> input;
+            datastack.push(std::make_shared<Data>(input));
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::PRT>>(instruction)) {
+            if (datastack.empty())
+                throw std::runtime_error("Cannot print from empty stack");
+            auto tmp = datastack.top();
+            std::cout << "Printing : ";
+            secd::showValue(tmp);
+            std::cout << std::endl;
+        }
         else {
             throw std::runtime_error("Not implemented");
         }

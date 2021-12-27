@@ -132,6 +132,12 @@ namespace inst {
         else if (std::holds_alternative<std::shared_ptr<inst::CDR>>(instruction)) {
             stream << "CDR";
         }
+        else if (std::holds_alternative<std::shared_ptr<inst::PRT>>(instruction)) {
+            stream << "PRT";
+        }
+        else if (std::holds_alternative<std::shared_ptr<inst::READ>>(instruction)) {
+            stream << "READ";
+        }
         else {
             stream << "mate too fast";
         }

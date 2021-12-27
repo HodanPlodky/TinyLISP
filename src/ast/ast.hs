@@ -44,6 +44,10 @@ data Expr
     | ECall Expr [Expr] -- callable expression and arguments
     | EList [Expr]
     | ELetrec String Expr Expr --name, recursive-lambda body
+    -- added because I dont have notion of external function
+    | EPrint Expr
+    | ERead
+    -- Error in parsing
     | EError
     deriving Show
 
@@ -80,7 +84,7 @@ data Inst
     | RTN
     | DUM
     | RAP
-    | PRT
+    | PRT 
     | READ
     deriving (Show, Eq, Ord)
 
@@ -159,6 +163,14 @@ generate (ELetrec name reclamb body) names =
             (appendInst 
                 (generate (ELambda [name] body) names)
                 RAP))
+
+
+-- read
+generate ERead _ = READ
+
+-- print
+generate (EPrint e) names =
+    appendInst (generate e names) PRT
 
 -- errors
 generate (EError) _ = ERR

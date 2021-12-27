@@ -23,4 +23,6 @@ main :: IO()
 main = do
     args <- getArgs
     str <- readFile $ head args
+    --putStrLn . show $ (parseImp [] . getTokens) str
+    --putStrLn . show $ getInst str
     compileAndSave (args !! 1) str
