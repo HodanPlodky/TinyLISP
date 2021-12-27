@@ -3,7 +3,7 @@ module Parser (parse, parseImp) where
 
 import Lexer
 import Ast
---import Debug.Trace
+import Debug.Trace
 
 parse :: [Token] -> Expr
 parse toks =
@@ -103,6 +103,7 @@ expressionBin t op =
       _ -> (EError, toks)
 
 expressionUnary :: [Token] -> UnOp -> (Expr, [Token])
+--expressionUnary t e | trace ("expressionUnary " ++ show t ++ " " ++ show e) False = undefined
 expressionUnary t op =
     let (e, toks) = factor t in
     case toks of
@@ -110,6 +111,7 @@ expressionUnary t op =
         _ -> (EError, toks)
     
 dataexpr :: [Token] -> (Expr, [Token])
+dataexpr (TKw Null : rest) = (ENull, rest)
 dataexpr (TNumber n : rest) = (ENum n, rest)
 dataexpr (TLBrac : rest) = listdata rest
 dataexpr toks = (EError, toks)

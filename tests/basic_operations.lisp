@@ -28,7 +28,7 @@
     (append) ((lambda (l e)
         (fold (lambda (x acc) (cons x acc)) (cons e null) l)
     ))
-(sum 
-    (map (lambda (x) (* x x))
-    (append (seq 1 10 2) 123)))
+ 
+(map (lambda (x) (* x x))
+    (append (seq 1 10 2) 123))
 ))))))

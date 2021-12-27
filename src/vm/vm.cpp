@@ -211,6 +211,7 @@ void numbinaryop(
     binaryop(datastack, numop, name);
 }
 
+// function to write out stack
 void traverse_stack(secd::Stack<Data> & st) {
     if(st.empty())
         return;
@@ -222,6 +223,7 @@ void traverse_stack(secd::Stack<Data> & st) {
     st.push(x);
 } 
 
+// Debug info
 void verboseWriteout(
     std::shared_ptr<secd::Code> code,
     secd::Stack<Data> & datastack,
@@ -229,7 +231,7 @@ void verboseWriteout(
     secd::Enviroment & env,
     int cycle
 ) {
-            //system("clear");
+            system("clear");
             std::cout << "cycle : " << cycle << std::endl;
             std::cout << "stack : " << std::endl;
             traverse_stack(datastack);
@@ -245,21 +247,7 @@ void verboseWriteout(
             secd::showValue(code->getData());
             std::cout << std::endl;
             std::cout << std::endl;
-            //std::cin.get();
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
+            std::cin.get();
 }
 
 bool tmpCompareData(secd::Value<Data> x, secd::Value<Data> y) {

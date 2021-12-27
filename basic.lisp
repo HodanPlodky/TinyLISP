@@ -1,1 +1,10 @@
-(letrec (foo) ((lambda (x) (+ x 1))) (foo 3))
+(+ 2 3)
+(letrec (seq) ((lambda (from to step f)
+    (if (> from to)
+        null
+        (cons (f from) (seq (+ from step) to step f))
+    )
+))
+(letrec (fact) ((lambda (n) (if (eq? n 0) 1 (* n (fact (- n 1))))))
+    (seq 1 16 1 fact)
+))
