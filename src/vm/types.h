@@ -27,6 +27,8 @@ namespace inst {
     struct RTN{};
     struct DUM{};
     struct RAP{};
+    struct PRT{};
+    struct READ{};
 
     using Inst = std::variant<
         std::shared_ptr<ERR>,
@@ -50,7 +52,9 @@ namespace inst {
         std::shared_ptr<AP>,
         std::shared_ptr<RTN>,
         std::shared_ptr<DUM>,
-        std::shared_ptr<RAP>>;
+        std::shared_ptr<RAP>,
+        std::shared_ptr<PRT>,
+        std::shared_ptr<READ>>;
     
     struct LDC {
         LDC(int number) : number(number) {}
@@ -61,13 +65,6 @@ namespace inst {
         LD(int i, int j) : i(i), j(j) {}
         int i, j;
     };
-
-    /*
-    struct LDF {
-        LDF(Inst inner) : inner(inner) {}
-        Inst inner;
-    };
-    */
 
     void show(Inst instruction, std::ostream & stream) {
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
@@ -310,8 +307,6 @@ namespace secd {
     }
 
     // four parts of secd
-    //template <typename T>
-    //using Stack = std::stack<Value<T>>;
     template <typename T>
     class Stack {
         public:

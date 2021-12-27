@@ -6,9 +6,11 @@ import Data.Binary.Put
 import Data.Binary
 import System.IO
 import Data.Map
---import Debug.Trace
---import Data.Bits.Extras
 
+
+--
+-- Ast data types
+--
 
 data BinOp
     = OAdd
@@ -49,6 +51,11 @@ appendExpr :: Expr -> Expr -> Expr
 appendExpr (EList l) e = EList (l ++ [e])
 appendExpr e1 e2 = EList [e1, e2]
 
+
+--
+-- SECD nstructions
+--
+
 data Inst
     = InstList [Inst]
     | ERR
@@ -73,6 +80,7 @@ data Inst
     | RTN
     | DUM
     | RAP
+    | PRT
     | READ
     deriving (Show, Eq, Ord)
 
@@ -81,8 +89,14 @@ appendInst (InstList l1) (InstList l2) = InstList (l1 ++ l2)
 appendInst (InstList l) i = InstList (l ++ [i])
 appendInst i1 i2 = InstList [i1, i2]
 
+
+--
+-- Generating secd instruction from ast
+--
+
 generate :: Expr -> [[String]] -> Inst
---generate e s | trace ("generate " ++ show e ++ show s) False = undefined
+-- basic data types
+generate (ENull) _ = InstList [NIL]
 generate (ENum n) _ = LDC n
 generate (EIdent s) names =
     let lx = Prelude.filter (\i -> elem s (names !! i)) [0..] in
@@ -91,11 +105,14 @@ generate (EIdent s) names =
         x -> case Prelude.filter (\i -> s == (names !! head x) !! i) [0..] of
             [] -> ERR
             y -> LD (head x) (head y)
-    
+
+-- build in unary operations
 generate (EUnaryOp UCar x) names =
     InstList [generate x names, CAR]
 generate (EUnaryOp UCdr x) names =
     InstList [generate x names, CDR]
+
+-- build in binary operations
 generate (EBinOp OAdd x y) names = 
     InstList [generate x names , generate y names, ADD]
 generate (EBinOp OSub x y) names = 
@@ -112,14 +129,19 @@ generate (EBinOp ODiv x y) names =
     InstList [generate x names, generate y names, DIV]
 generate (EBinOp OCons x y) names = 
     InstList [generate y names, generate x names, CONS]
+
+-- flow control
 generate (EIf cond thenB elseB) names = 
     InstList    [ generate cond names, SEL
                 , appendInst (generate thenB names) JOIN
                 , appendInst (generate elseB names) JOIN
                 ]
+
+-- lists
 generate (EList exprs) names = 
-    InstList $ Prelude.map (\x ->generate x names)  exprs 
-generate (ENull) _ = InstList [NIL]
+    InstList $ Prelude.map (\x ->generate x names)  exprs
+
+-- functions and their applications
 generate (ELambda args body) names =
     LDF $ appendInst (generate body (args : names)) RTN
 generate (ECall callable args) names =
@@ -137,8 +159,16 @@ generate (ELetrec name reclamb body) names =
             (appendInst 
                 (generate (ELambda [name] body) names)
                 RAP))
+
+-- errors
 generate (EError) _ = ERR
 generate _ _ = NIL
+
+
+--
+-- This part of code handles saving 
+-- generated instuction to file
+--
 
 save :: String -> Inst -> IO ()
 save path (InstList insts) = do
@@ -150,7 +180,7 @@ save path inst = do
     saveImpl [inst] h_out
     hClose h_out
 
--- TODO please refactor
+-- code for instruction without any intresting going on
 simpleSaves :: Map Inst Word64
 simpleSaves = fromList
     [ (ADD, 0x01)
@@ -171,11 +201,13 @@ simpleSaves = fromList
     , (Ast.LT, 0x13)
     , (DUM, 0x14)
     , (RAP, 0x15)
-    , (READ, 0x16)
+    , (PRT, 0x16)
+    , (READ, 0x17)
     , (ERR, 0xfe)
     ]
 
 saveImpl :: [Inst] -> Handle -> IO ()
+-- intresting (aka must do more then just write out code) instrustions
 saveImpl (InstList insts : rest) outfile = do
     BIN.hPut outfile $ runPut (putWord64be 0x00)
     saveImpl insts outfile
@@ -204,6 +236,7 @@ saveImpl (LDF insts : rest) outfile = do
     saveImpl ([InstList [insts]]) outfile
     saveImpl rest outfile
 
+-- not intresting instructions
 saveImpl (x : rest) outfile = 
     let word = case Data.Map.lookup x simpleSaves of
             Just w -> w
@@ -213,4 +246,5 @@ saveImpl (x : rest) outfile =
     BIN.hPut outfile $ runPut (putWord64be word)
     saveImpl rest outfile
 
+-- end of instructions
 saveImpl [] _ = return () 

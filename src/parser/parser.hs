@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -dynamic #-}
-module Parser (parse, parseImp) where
+module Parser (parse) where
 
 import Lexer
 import Ast
-import Debug.Trace
 
 parse :: [Token] -> Expr
 parse toks =
@@ -12,7 +11,6 @@ parse toks =
         _ -> EError
 
 parseImp :: [Expr] -> [Token] -> (Expr, [Token])
---parseImp t e | trace ("parseImp " ++ show t ++ " " ++ show e) False = undefined
 parseImp acc [] = (EList acc, [])
 parseImp acc [TEof] = (EList acc, [])
 parseImp acc t = 
@@ -22,7 +20,7 @@ parseImp acc t =
         _ -> parseImp (acc ++ [e]) toks
 
 expression :: [Token] -> (Expr, [Token])
---expression t | trace ("expression " ++ show t) False = undefined
+-- build in binary operations
 expression (TLBrac:TAdd:rest) = expressionBin rest OAdd
 expression (TLBrac:TSub:rest) = expressionBin rest OSub
 expression (TLBrac:TMul:rest) = expressionBin rest OMul
@@ -31,12 +29,21 @@ expression (TLBrac:TLt:rest) = expressionBin rest OLt
 expression (TLBrac:TGt:rest) = expressionBin rest OGt
 expression (TLBrac:TKw FCons:rest) = expressionBin rest OCons
 expression (TLBrac:TKw Eq:rest) = expressionBin rest OEq
+
+-- build in unary operations
 expression (TLBrac:TKw Car:rest) = expressionUnary rest UCar
 expression (TLBrac:TKw Cdr:rest) = expressionUnary rest UCdr
+
 expression (TLBrac:TKw Null:rest) = (ENull, rest) 
+
+--functions
 expression (TLBrac:TKw Lambda:rest) = lambdaexpr rest
 expression (TLBrac:TKw Letrec:rest) = letrec rest
+
+-- null keyword
 expression (TKw Null : rest) = (ENull, rest)
+
+-- parsing if-else expression
 expression (TLBrac:TKw If:rest) =
     let (cond, t1) = factor rest
         (thenB, t2) = factor t1
@@ -46,6 +53,7 @@ expression (TLBrac:TKw If:rest) =
         (TRBrac:rest) -> (EIf cond thenB elseB, rest)
         _ -> (EError, toks)
 
+-- parsing function applications
 expression (TLBrac : tok : rest) =
     let (callable, t1) = factor (tok : rest)
         (args, t2) = factors t1 []
@@ -60,6 +68,7 @@ expression (TTick : rest) = dataexpr rest
 expression (_:rest) = (EError, rest)
 expression [] = (EError, [])
 
+-- parsing of letrec expression
 letrec :: [Token] -> (Expr, [Token])
 letrec (TLBrac : TIdent name : TRBrac : TLBrac : rest) = 
     let (reclamb, t1) = factor rest in
@@ -73,6 +82,7 @@ letrec (TLBrac : TIdent name : TRBrac : TLBrac : rest) =
 
 letrec toks = (EError, toks)
 
+-- parsing of lambda
 lambdaexpr :: [Token] -> (Expr, [Token])
 lambdaexpr (TLBrac : rest) = 
     let (args, t1) = paramexpr rest
@@ -92,8 +102,8 @@ paramexpr (TIdent s : rest) =
         Nothing -> (Nothing, rest)
 paramexpr toks = (Nothing, toks)
 
+-- parsing of build in binary operation
 expressionBin :: [Token] -> BinOp -> (Expr, [Token])
---expressionBin t e | trace ("expressionBin " ++ show t ++ " " ++ show e) False = undefined
 expressionBin t op = 
     let (l, toksl) = factor t
         (r, toks) = factor toksl
@@ -102,14 +112,15 @@ expressionBin t op =
       (TRBrac:rest) -> (EBinOp op l r, rest)
       _ -> (EError, toks)
 
+-- parsing of build in unary operation
 expressionUnary :: [Token] -> UnOp -> (Expr, [Token])
---expressionUnary t e | trace ("expressionUnary " ++ show t ++ " " ++ show e) False = undefined
 expressionUnary t op =
     let (e, toks) = factor t in
     case toks of
         (TRBrac : rest) -> (EUnaryOp op e, rest)
         _ -> (EError, toks)
     
+-- parsing of just data (aka anything starting with ')
 dataexpr :: [Token] -> (Expr, [Token])
 dataexpr (TKw Null : rest) = (ENull, rest)
 dataexpr (TNumber n : rest) = (ENum n, rest)
@@ -127,8 +138,8 @@ listdata toks =
         (_, EError) -> (EError, toks)
         (_, _) -> (EBinOp OCons car cdr, t2)
 
+-- basic things (aka numbers, data and idents)
 factor :: [Token] -> (Expr, [Token])
---factor t | trace ("factor " ++ show t) False = undefined
 factor (TTick : rest) = dataexpr rest
 factor (TNumber n : rest) = (ENum n, rest)
 factor (TIdent s : rest) = (EIdent s, rest)
@@ -137,8 +148,8 @@ factor (TLBrac:rest) = expression (TLBrac : rest)
 factor (_ : rest) = (EError, rest)
 factor [] = (EError, [])
 
+-- list of factors
 factors :: [Token] -> [Expr] -> ([Expr], [Token])
---factors t e | trace ("factors " ++ show t ++ " " ++ show e) False = undefined
 factors toks acc =
     let (f, t) = factor toks in 
     case f of

@@ -1,7 +1,0 @@
-ahoj ahoj cau if 123 0x12 + () - * (12)
-    (letrec 
-        (sum) ((lambda (n) 
-            (if (eq? 1 n) 1 (+ n (sum (- n 1))))
-        ))
-        (fact (sum 3))
-    )

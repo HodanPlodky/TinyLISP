@@ -14,7 +14,7 @@ getInst str =
 compileAndSave :: String -> String -> IO()
 compileAndSave path str =
     case getInst str of
-        Nothing -> putStrLn "Error"
+        Nothing -> error "Error"
         Just inst -> do 
             save path inst
             putStrLn "Done"
@@ -23,6 +23,4 @@ main :: IO()
 main = do
     args <- getArgs
     str <- readFile $ head args
-    --putStrLn . show $ (parseImp [] . getTokens) str
-    --putStrLn . show $ getInst str
     compileAndSave (args !! 1) str

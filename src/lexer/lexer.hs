@@ -2,6 +2,7 @@
 module Lexer (Token (..), Keyword(..), getTokens) where
 import Data.Char
 
+-- Build in keywords datatype
 data Keyword
     = Defun
     | If
@@ -13,8 +14,11 @@ data Keyword
     | Letrec
     | Car
     | Cdr
+    | KwRead
+    | KwPrint
     deriving Show
 
+-- check if ident is not keyword
 checkIdent :: String -> Token
 checkIdent name =
     case name of
@@ -28,8 +32,11 @@ checkIdent name =
         "letrec" -> TKw Letrec
         "car" -> TKw Car
         "cdr" -> TKw Cdr
+        "read" -> TKw KwRead
+        "print" -> TKw KwPrint
         n -> TIdent n
 
+-- tokens
 data Token
     = TEof
     | TError String
@@ -49,6 +56,7 @@ data Token
     | TTick
     deriving Show
 
+-- definition of sum handy set of characters
 alfa :: [Char]
 alfa = ['a'..'z'] ++ ['A'..'Z']
 
@@ -61,6 +69,9 @@ nums = ['0'..'9']
 whiteSpace :: [Char]
 whiteSpace = ['\n', '\r', '\r', ' ']
 
+-- funny helper funtions
+-- match is just function witch similar functionality like case 
+-- but I found it bit more usefull in some cases then the case
 match :: a -> [(a -> Bool, b)] -> Maybe b
 match _ [] = Nothing
 match item (test:rest) =
@@ -71,6 +82,7 @@ match item (test:rest) =
 elemCh :: (Foldable t, Eq a) => t a -> a -> Bool
 elemCh l e = elem e l
 
+-- main function of lexer
 getTokens :: String -> [Token]
 getTokens "" = [TEof]
 getTokens (c:rest) =
@@ -101,6 +113,11 @@ getTokens (c:rest) =
       Just val -> val
       Nothing -> [TError "Cannot lex"]
 
+--
+-- helper states in lexer
+--
+
+
 stateIdent :: String -> String -> [Token]
 stateIdent "" acc = [checkIdent acc]
 stateIdent (c:rest) acc =
@@ -115,6 +132,7 @@ stateStartNum ('0':c:rest) = stateNum (c:rest) 0 8
 stateStartNum (c:rest) = stateNum (c:rest) 0 10
 stateStartNum _ = [TError "Not a number"]
 
+-- check validity of number depending on base
 checkNum :: Char -> Int -> Maybe Int
 checkNum c base =
     let n = ord c - ord '0' 
@@ -131,6 +149,7 @@ stateNum (c:rest) acc base =
         Nothing -> TNumber acc : getTokens (c:rest)
     where n = checkNum c base
 
+-- check validity of hex char and parses
 checkHex :: Char -> Maybe Int
 checkHex c
     | elem c nums = checkNum c 16

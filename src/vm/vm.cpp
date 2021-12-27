@@ -149,6 +149,14 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
                 code->add(std::make_shared<Data>(std::make_shared<inst::RAP>()));
                 break;
             }
+            case 0x16 : {
+                code->add(std::make_shared<Data>(std::make_shared<inst::PRT>()));
+                break;
+            }
+            case 0x17 : {
+                code->add(std::make_shared<Data>(std::make_shared<inst::READ>()));
+                break;
+            }
             case 0xfe : {
                 code->add(std::make_shared<Data>(std::make_shared<inst::ERR>()));
                 break;

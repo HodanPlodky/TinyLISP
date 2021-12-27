@@ -1,3 +1,5 @@
 *.hi
 *.o
 main
+vm
+*.out
