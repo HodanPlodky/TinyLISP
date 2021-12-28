@@ -26,31 +26,31 @@
 
 using secd::Data;
 
+// helper function to read long in format which Haskell saves it
 long readLong(std::ifstream & stream) {
     uint8_t buffer[8];
     stream.read((char*)buffer, 8);
-    /*
-    for (int i = 0; i < 8; i++) {
-        unsigned int x = 0;
-        x += buffer[i];
-        std::cout << std::hex << x << " ";
-    }
-    std::cout << std::dec << std::endl;
-    */
     return 
         (long)buffer[7] | (long)buffer[6] << 8 | (long)buffer[5] << 16 | (long)buffer[4] << 24 | 
         (long)buffer[3] << 32 | (long)buffer[2]<< 40 | (long)buffer[1] << 48 |
         (long)buffer[0] << 56; 
 }
 
+/*
+ * Reads bytecode file and returns Code
+*/
 std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
     long out;
-    char buffer[8];
     auto code = std::make_shared<secd::Code>(secd::Code());
-
+    
+    // main loop of reading which parses
+    // bytecode to instructions and adding
+    // it to code
     while (!stream.eof()) {
         out = readLong(stream);
         switch (out) {
+            // code 0x00 signifies cons cell -> it is parsed
+            // like its own list of instructions
             case 0x00 : {
                 auto codeinner = readInst(stream);
                 code->addData(codeinner->getData());
@@ -169,6 +169,9 @@ std::shared_ptr<secd::Code> readInst(std::ifstream & stream) {
     return code;
 } 
 
+// helper function to ease creating binary operations
+// because there is a lot of same code, just operation on
+// data from stack is different
 void binaryop(
     secd::Stack<Data> & datastack, 
     std::function<secd::Value<Data>(secd::Value<Data>, secd::Value<Data>)> op, 
@@ -185,6 +188,8 @@ void binaryop(
     datastack.push(op(x, y));
 }
 
+// helper function for binary operation
+// but just for numerical data
 void numbinaryop(
     secd::Stack<Data> & datastack, 
     std::function<int(int, int)> op, 
@@ -232,6 +237,7 @@ void traverse_stack(secd::Stack<Data> & st) {
 } 
 
 // Debug info
+// used when -v flag is used
 void verboseWriteout(
     std::shared_ptr<secd::Code> code,
     secd::Stack<Data> & datastack,
@@ -292,6 +298,7 @@ bool tmpCompareData(secd::Value<Data> x, secd::Value<Data> y) {
     return false;
 }
 
+// Main execution loop for SECD Machine
 void run(
     std::shared_ptr<secd::Code> code,
     secd::Stack<Data> & datastack,
@@ -301,21 +308,29 @@ void run(
 ) {
     int cycle = -1;
     while(!code->empty()) {
+        // Debug info
         cycle++;
-        //std::cout << "cycle : " << cycle << std::endl;
         if (verbose) {
             verboseWriteout(code, datastack, dump, env, cycle);
         }
+
+        // extracting instruction
         if (code->isHeadList()) {
             auto list = code->next();
             code = std::make_shared<secd::Code>(secd::Code(secd::appendLists(list, code->getData())));
             continue;
         }
         auto instruction = code->nextInst();
+
+        /*
+        * Executing instraction base on its type
+        */
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
             auto ldc = std::get<std::shared_ptr<inst::LDC>>(instruction);
             datastack.push(std::make_shared<Data>(ldc->number));
         }
+
+        // build in binary instruction
         else if (std::holds_alternative<std::shared_ptr<inst::ADD>>(instruction)) {
             numbinaryop(datastack, [](int x, int y) {return x + y;}, "ADD");
         }
@@ -340,6 +355,14 @@ void run(
         else if (std::holds_alternative<std::shared_ptr<inst::LT>>(instruction)) {
             numbinaryop(datastack, [](int x, int y) {return y < x ? 1 : 0;}, "LT");
         }
+
+        // operation with lists
+        else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
+            auto op = [](secd::Value<Data> x, secd::Value<Data> y) -> secd::Value<Data> {
+                return secd::cons(x, y);
+            };
+            binaryop(datastack, op, "CONS");
+        }
         else if (std::holds_alternative<std::shared_ptr<inst::CAR>>(instruction)) {
             auto tmp = datastack.top();
             datastack.pop();
@@ -350,8 +373,9 @@ void run(
             datastack.pop();
             datastack.push(secd::cdr(tmp));
         }
+
+        // branching
         else if (std::holds_alternative<std::shared_ptr<inst::JOIN>>(instruction)) {
-            //std::cout << "JOIN" << std::endl;
             auto recovered = dump.recover();
             code->prepend(recovered);
         }
@@ -381,19 +405,19 @@ void run(
                 code = ncode;
             }
         }
+
+        // null
         else if (std::holds_alternative<std::shared_ptr<inst::NIL>>(instruction)) {
             datastack.push(secd::Nil);
         }
-        else if (std::holds_alternative<std::shared_ptr<inst::CONS>>(instruction)) {
-            auto op = [](secd::Value<Data> x, secd::Value<Data> y) -> secd::Value<Data> {
-                return secd::cons(x, y);
-            };
-            binaryop(datastack, op, "CONS");
-        }
+
+        // loading from enviroment
         else if (std::holds_alternative<std::shared_ptr<inst::LD>>(instruction)) {
             auto ld = std::get<std::shared_ptr<inst::LD>>(instruction);
             datastack.push(env.get(ld->i, ld->j));
         }
+
+        // function section
         else if (std::holds_alternative<std::shared_ptr<inst::LDF>>(instruction)) {
             auto tmpenv = env.get();
             secd::Value<Data> tmpnext = code->next();
@@ -423,6 +447,8 @@ void run(
                 env.set(
                     secd::cdr(secd::cdr(recovered)));
         }
+
+        // recursive application section
         else if (std::holds_alternative<std::shared_ptr<inst::DUM>>(instruction)) {
             env.set(secd::cons<Data>(secd::Nil, env.get()));
         }
@@ -445,6 +471,8 @@ void run(
             code = std::make_shared<secd::Code>(car(closure));
             env.set(cdr(closure));
         }
+
+        // IO section
         else if (std::holds_alternative<std::shared_ptr<inst::READ>>(instruction)) {
             std::cout << "Input value (integer) : ";
             int input;
@@ -459,6 +487,9 @@ void run(
             secd::showValue(tmp);
             std::cout << std::endl;
         }
+
+        // welp I dont know what do you want from
+        // so I just die :/
         else {
             throw std::runtime_error("Not implemented");
         }
@@ -484,6 +515,7 @@ int main(int argc, char ** argv) {
         traverse_stack(datastack);
     }
     catch(const std::exception& e) {
+        // write out in not totally bad format errors from runtime
         std::cout << "runtime error : " << e.what() << std::endl;
     }
     return 0;

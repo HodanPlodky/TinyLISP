@@ -4,6 +4,10 @@
 #include <stdexcept>
 #include <sstream>
 
+/*
+* This namespace handles instructions
+* and mostly their definitions
+*/
 namespace inst {
     struct ERR{};
     struct LDC;
@@ -30,6 +34,9 @@ namespace inst {
     struct PRT{};
     struct READ{};
 
+    // I tried using Algebraic type to define
+    // instruction and to achive that in c++ I used
+    // std::variant (and its used more in diferent parts of code)
     using Inst = std::variant<
         std::shared_ptr<ERR>,
         std::shared_ptr<LDC>,
@@ -66,6 +73,7 @@ namespace inst {
         int i, j;
     };
 
+    // used to write out instruction mostly to debug
     void show(Inst instruction, std::ostream & stream) {
         if (std::holds_alternative<std::shared_ptr<inst::LDC>>(instruction)) {
             auto tmp = std::get<std::shared_ptr<LDC>>(instruction);
@@ -139,21 +147,34 @@ namespace inst {
             stream << "READ";
         }
         else {
-            stream << "mate too fast";
+            throw std::runtime_error("Undefied instruction name");
         }
 
     }
 }
 
+/*
+* This namespace handles internal logic of SECD machine
+* so It implements all 4 parts (Stack, Enviroment, Code and Dump)
+* while logic of instructions using these parts is located
+* in vm.cpp
+*/
 namespace secd {
-    // data in secd
+    /*
+    * data in secd
+    */
+
+    // null
     struct NilT {};
     const std::shared_ptr<NilT> Nil = 
         std::make_shared<NilT>(NilT());
 
-    template <typename T> 
-    class List;
 
+    /*
+    * This part defines generic version
+    * of Value in different parts of SECD
+    * again done as Algebraic type
+    */
     template <typename T>
     struct ConsCell;
 
@@ -169,6 +190,10 @@ namespace secd {
         Value<T> cdr;
     };
 
+    /*
+    * operation on Value
+    * mostly on Cons cell variant
+    */
     template <typename T>
     Value<T> car(Value<T> val) {
         if (!std::holds_alternative<std::shared_ptr<ConsCell<T>>>(val)) {
@@ -227,22 +252,8 @@ namespace secd {
         return Nil;
     }
 
-    void showInsts(Value<inst::Inst> val) {
-        if (std::holds_alternative<std::shared_ptr<NilT>>(val)) {
-            std::cout << " null ";
-        }
-        else if (std::holds_alternative<std::shared_ptr<inst::Inst>>(val)) {
-            auto tmp = std::get<std::shared_ptr<inst::Inst>>(val);
-            inst::show(*tmp, std::cout);
-        }
-        else if (std::holds_alternative<std::shared_ptr<ConsCell<inst::Inst>>>(val)) {
-            std::cout << "( ";
-            showInsts(car(val));
-            std::cout << " ";
-            showInsts(cdr(val));
-            std::cout << ")";
-        }
-    }
+    // function to write out Value
+    // used in print instruction and debug
     #define __MAX_DEPTH__ 8 
     template <typename T>
     void showValue(Value<T> val, int depth = 0) {
@@ -265,6 +276,8 @@ namespace secd {
         }
     }
 
+    // helper function for showValue
+    // used to make nice format of lists
     template <typename T>
     void showValueInner(Value<T> val, int depth = 0) {
         if (std::holds_alternative<std::shared_ptr<T>>(val)) {
@@ -298,6 +311,8 @@ namespace secd {
         }
     }
     
+    // Contrete type for smallest type of data in
+    // SECD Maching. Basically every Value<T> is Value<Data> 
     using Data = std::variant<
             int,
             inst::Inst
@@ -313,6 +328,8 @@ namespace secd {
     }
 
     // four parts of secd
+
+    // Stack implemented via Value<T>
     template <typename T>
     class Stack {
         public:
@@ -346,6 +363,7 @@ namespace secd {
             Value<T> data;
     };
 
+    // Enviroment implemented via Value<Data>
     class Enviroment {
         public:
             Enviroment() : data(Nil) {}
@@ -373,6 +391,9 @@ namespace secd {
             Value<Data> data;
     };
 
+    // Code implemented via Value<Data>
+    // its mostly Queue but has some helpful
+    // methods to use while execution
     class Code {
         public:
             Code() : data(Nil) {}
@@ -385,8 +406,6 @@ namespace secd {
 
             void add(Value<Data> val) {
                 if (std::holds_alternative<std::shared_ptr<Data>>(val)) {
-                    //Data d = std::get<std::shared_ptr<inst::Inst>>(val);
-                    //Value<Data> tmp = val;
                     data = append(data, val);
                 }
                 else {
@@ -472,6 +491,7 @@ namespace secd {
             Value<Data> data;
     };
 
+    // Dump implemented using Stack<Data>
     class Dump {
         public:
             Dump() : data(Stack<Data>()) {}
