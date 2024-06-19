@@ -252,6 +252,22 @@ namespace secd {
         return Nil;
     }
 
+    // Contrete type for smallest type of data in
+    // SECD Maching. Basically every Value<T> is Value<Data> 
+    using Data = std::variant<
+            int,
+            inst::Inst
+        >;
+    std::ostream & operator<<(std::ostream & stream, const Data & val) {
+        if (std::holds_alternative<int>(val)) {
+            stream << std::get<int>(val);
+        }
+        else {
+            inst::show(std::get<inst::Inst>(val), stream);
+        }
+        return stream;
+    }
+
     // function to write out Value
     // used in print instruction and debug
     #define __MAX_DEPTH__ 8 
@@ -309,22 +325,6 @@ namespace secd {
                 std::cout << " )";
             }
         }
-    }
-    
-    // Contrete type for smallest type of data in
-    // SECD Maching. Basically every Value<T> is Value<Data> 
-    using Data = std::variant<
-            int,
-            inst::Inst
-        >;
-    std::ostream & operator<<(std::ostream & stream, const Data & val) {
-        if (std::holds_alternative<int>(val)) {
-            stream << std::get<int>(val);
-        }
-        else {
-            inst::show(std::get<inst::Inst>(val), stream);
-        }
-        return stream;
     }
 
     // four parts of secd
